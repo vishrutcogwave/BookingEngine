@@ -1,5 +1,5 @@
-// const API_BASE_URL = 'https://onlinebooking.cogwave.in/';
-const API_BASE_URL = 'https://pousadabookingapi.cogwave.in/'
+const API_BASE_URL = 'https://onlinebooking.cogwave.in/';
+// const API_BASE_URL = 'https://pousadabookingapi.cogwave.in/'
 /**
  * Fetch hotel ID
  * This endpoint might return hotel IDs based on search criteria
@@ -32,6 +32,41 @@ export const getHotelId = async () => {
     throw error;
   }
 };
+
+
+export const getTaxAmount = async (amount) => {
+  console.log("ammount",amount);
+  
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/bookingengine/gettaxamount?amount=${encodeURIComponent(amount)}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to fetch tax amount (${response.status}): ${errorText}`
+      );
+    }
+
+    const taxData = await response.json();
+    console.log("Tax Data:", taxData);
+
+    return taxData;
+  } catch (error) {
+    console.error("Error fetching tax amount:", error);
+    throw error;
+  }
+};
+
+
+
 /**
  * Helper function to format date to MM/DD/YYYY format
  * @param {string|Date} dateString - Date string in YYYY-MM-DD format or Date object
@@ -348,31 +383,7 @@ export const checkPaymentStatus = async (merchantOrderId) => {
  * @param {number} amount - Amount in rupees to calculate tax on
  * @returns {Promise<Array>} Array of tax objects with TaxName, TaxPer, and TaxValue
  */
-export const getTaxAmount = async (amount) => {
-  try {
-    const url = new URL(`${API_BASE_URL}/gettaxamount`);
-    url.searchParams.append('amount', amount);
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      // console.error('❌ Tax calculation error:', errorText);
-      throw new Error(`Failed to fetch tax amount: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    // console.error('❌ Error fetching tax amount:', error);
-    throw error;
-  }
-};
 
 /**
  * Submit Reservation Data
@@ -509,6 +520,7 @@ export const phonePeWebhook = async (token, paymentData = {}) => {
  * @returns {Promise<Object>} API response
  */
 export const sendBookingConfirmation = async (confirmationData) => {
+  debugger
   try {
     // console.log('═'.repeat(80));
     // console.log('📤 SENDING BOOKING CONFIRMATION (WhatsApp & Email)');
@@ -539,7 +551,7 @@ export const sendBookingConfirmation = async (confirmationData) => {
     // }, null, 2));
     // console.log('═'.repeat(80));
 
-    const response = await fetch(`${API_BASE_URL}/sendwhatsupmessage`, {
+    const response = await fetch(`${API_BASE_URL}/api/bookingengine/sendwhatsupmessage`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',

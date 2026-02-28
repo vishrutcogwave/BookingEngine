@@ -1,7 +1,8 @@
 import { Calendar, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { saveBookingData } from "../utils/bookingStorage";
-import {checkTheroomStatus} from "../services/api"
+import { checkTheroomStatus, getTaxAmount } from "../services/api";
+import { useEffect, useState } from "react";
 
 const BookingSummary = ({
   checkInDate,
@@ -23,63 +24,68 @@ const BookingSummary = ({
   onApplyCoupon,
 }) => {
   const navigate = useNavigate();
-
+  const [roomTaxesApi, setRoomTaxesApi] = useState([]);
   // Tax calculation function
-  const calculateTax = (pricePerNight, quantity, nights) => {
-    const totalAmount = pricePerNight * quantity * nights;
-    // If room price is below 7000, apply 5% tax; otherwise apply 18% tax
-    const taxRate = pricePerNight < 7000 ? 0.05 : 0.18;
-    return Math.round(totalAmount * taxRate * 100) / 100; // Round to 2 decimals
-  };
 
   // Calculate room charges based on API structure (no service fee or tax)
-const roomCharges = selectedRooms.reduce((sum, room) => {
-  const price = Number(room.pricePerNight ?? room.price ?? 0);
-  const count = Number(room.roomCount ?? 1);
-  const nights = Number(numNights ?? 1);
+  const roomCharges = selectedRooms.reduce((sum, room) => {
+    const price = Number(room.pricePerNight ?? room.price ?? 0);
+    const count = Number(room.roomCount ?? 1);
+    const nights = Number(numNights ?? 1);
 
-  const calculated = price * count * nights;
+    const calculated = price * count * nights;
 
-  return sum + (isNaN(calculated) ? 0 : calculated);
-}, 0);
+    return sum + (isNaN(calculated) ? 0 : calculated);
+  }, 0);
+useEffect(() => {
+  const fetchRoomTaxes = async () => {
+    // 🟢 CLEAR taxes when no rooms selected
+    if (!selectedRooms.length) {
+      setRoomTaxesApi([]);
+      return;
+    }
 
-  // Calculate tax for each room locally
-  const calculatedRoomTaxes = selectedRooms.map((room) => {
-    const price = room.pricePerNight || room.price || 0;
-    const count = room.roomCount || 1;
-    const tax = calculateTax(price, count, numNights);
-    return {
-      roomId: room.id,
-      tax,
-    };
-  });
+    try {
+      const results = await Promise.all(
+        selectedRooms.map(async (room) => {
+          const price = Number(room.pricePerNight ?? room.price ?? 0);
+          const count = Number(room.roomCount ?? 1);
+          const nights = Number(numNights ?? 1);
 
-  // Calculate total tax amount
-  let totalTaxAmount = 0;
-  if (roomTaxes && roomTaxes.length > 0) {
-    // Use provided roomTaxes if available
-    totalTaxAmount = roomTaxes.reduce((sum, roomTax) => {
-      const taxValue = roomTax.taxes.reduce(
-        (taxSum, tax) => taxSum + (tax.TaxValue || 0),
-        0,
+          const taxableAmount = price * count * nights;
+
+          const taxResponse = await getTaxAmount(String(taxableAmount));
+
+          return {
+            roomId: room.id,
+            taxes: taxResponse || [],
+          };
+        })
       );
-      return sum + taxValue;
-    }, 0);
-  } else if (calculatedRoomTaxes.length > 0) {
-    // Otherwise use calculated taxes
-    totalTaxAmount = calculatedRoomTaxes.reduce((sum, rt) => sum + rt.tax, 0);
-  } else {
-    // Old format for backward compatibility
-    totalTaxAmount = Array.isArray(taxes)
-      ? taxes.reduce((sum, tax) => sum + (tax.TaxValue || 0), 0)
-      : 0;
-  }
+
+      setRoomTaxesApi(results);
+    } catch (error) {
+      console.error("Tax API error:", error);
+    }
+  };
+
+  fetchRoomTaxes();
+}, [JSON.stringify(selectedRooms.map(r => r.id)), numNights]);
+  const totalTaxAmount = roomTaxesApi.reduce((sum, room) => {
+  const roomTax = room.taxes.reduce(
+    (taxSum, tax) => taxSum + Number(tax.TaxValue ?? tax.TaxVaue ?? 0),
+    0
+  );
+
+  return sum + roomTax;
+}, 0);
 
   // Total price - always includes taxes now (both checkout and hotel details page)
   const isCheckout = variant === "checkout";
-  const totalPrice = roomCharges + totalTaxAmount;
-  console.log("totalPrice",totalPrice);
-  
+  const totalPrice = selectedRooms.length
+  ? roomCharges + totalTaxAmount
+  : 0;
+  console.log("totalPrice", totalPrice);
 
   // Calculate totals
   const totalRooms = selectedRooms.reduce(
@@ -179,7 +185,7 @@ const roomCharges = selectedRooms.reduce((sum, room) => {
             const roomCharge = price * count * numNights;
 
             // Find taxes for this room from roomTaxes
-            const roomTaxData = roomTaxes.find((rt) => rt.roomId === room.id);
+            const roomTaxData = roomTaxesApi.find((rt) => rt.roomId === room.id);
             const roomTaxAmount = roomTaxData
               ? roomTaxData.taxes.reduce(
                   (sum, tax) => sum + (tax.TaxValue || 0),
@@ -210,14 +216,14 @@ const roomCharges = selectedRooms.reduce((sum, room) => {
                 </div>
                 {!isCheckout && (
                   <>
-                 <p className="text-xs text-gray-500">
-  {typeof room.rateShortName === "string"
-    ? room.rateShortName
-    : room.rateShortName?.RateShortName ||
-      (room.withBreakfast
-        ? "Room with breakfast"
-        : "Room Only")}
-</p>
+                    <p className="text-xs text-gray-500">
+                      {typeof room.rateShortName === "string"
+                        ? room.rateShortName
+                        : room.rateShortName?.RateShortName ||
+                          (room.withBreakfast
+                            ? "Room with breakfast"
+                            : "Room Only")}
+                    </p>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500">
                         Room Charges
@@ -227,25 +233,20 @@ const roomCharges = selectedRooms.reduce((sum, room) => {
                       </span>
                     </div>
                     {/* Show per-room taxes on hotel details page */}
-                    {!isCheckout &&
-                      roomTaxData &&
-                      roomTaxData.taxes.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-                          {roomTaxData.taxes.map((tax, taxIdx) => (
-                            <div
-                              key={taxIdx}
-                              className="flex justify-between text-xs"
-                            >
-                              <span className="text-gray-600">
-                                {tax.TaxName} ({tax.TaxPer}%)
-                              </span>
-                              <span className="text-gray-900">
-                                ₹{(tax.TaxValue || 0).toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                {!isCheckout && roomTaxData?.taxes?.length > 0 && (
+  <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+    {roomTaxData?.taxes?.map((tax, taxIdx) => (
+      <div key={taxIdx} className="flex justify-between text-xs">
+        <span className="text-gray-600">
+          {tax.TaxName} ({Number(tax.TaxPer).toFixed(2)}%)
+        </span>
+        <span className="text-gray-900">
+          ₹{Number(tax.TaxVaue ?? tax.TaxValue ?? 0).toLocaleString()}
+        </span>
+      </div>
+    ))}
+  </div>
+)}
                   </>
                 )}
 
@@ -295,59 +296,35 @@ const roomCharges = selectedRooms.reduce((sum, room) => {
       {/* Taxes Breakdown - Show CGST and SGST separately */}
       {isCheckout && selectedRooms.length > 0 && totalTaxAmount > 0 && (
         <div className="mb-3 pb-3 border-b border-gray-100 space-y-1">
-          {selectedRooms.map((room) => {
-            const price = room.pricePerNight || room.price || 0;
-            const count = room.roomCount || 1;
-            const totalAmount = price * count * numNights;
-            const taxRate = price < 7000 ? 0.05 : 0.18;
+          {roomTaxesApi.map((roomTax) => {
+            const room = selectedRooms.find((r) => r.id === roomTax.roomId);
 
-            if (taxRate === 0.05) {
-              // 5% tax split into CGST (2.5%) + SGST (2.5%)
-              const cgst = Math.round(totalAmount * 0.025 * 100) / 100;
-              const sgst = Math.round(totalAmount * 0.025 * 100) / 100;
-              return (
-                <div key={room.id} className="text-sm">
-                  <div className="flex justify-between text-gray-600 mb-1">
-                    <span className="text-xs">{room.name}</span>
-                  </div>
-                  <div className="flex justify-between text-xs ml-2 mb-0.5">
-                    <span className="text-gray-600">CGST (2.5%)</span>
-                    <span className="text-gray-900">
-                      ₹{cgst.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs ml-2">
-                    <span className="text-gray-600">SGST (2.5%)</span>
-                    <span className="text-gray-900">
-                      ₹{sgst.toLocaleString()}
-                    </span>
-                  </div>
+            return (
+              <div key={roomTax.roomId} className="text-sm">
+                <div className="flex justify-between text-gray-600 mb-1">
+                  <span className="text-xs">{room?.name}</span>
                 </div>
-              );
-            } else {
-              // 18% tax split into CGST (9%) + SGST (9%)
-              const cgst = Math.round(totalAmount * 0.09 * 100) / 100;
-              const sgst = Math.round(totalAmount * 0.09 * 100) / 100;
-              return (
-                <div key={room.id} className="text-sm">
-                  <div className="flex justify-between text-gray-600 mb-1">
-                    <span className="text-xs">{room.name}</span>
-                  </div>
-                  <div className="flex justify-between text-xs ml-2 mb-0.5">
-                    <span className="text-gray-600">CGST (9%)</span>
+
+                {roomTax.taxes.map((tax, index) => (
+                  <div
+                    key={index}
+                    className={`flex justify-between text-xs ml-2 ${
+                      index < roomTax.taxes.length - 1 ? "mb-0.5" : ""
+                    }`}
+                  >
+                    <span className="text-gray-600">
+                      {tax.TaxName} ({Number(tax.TaxPer).toFixed(2)}%)
+                    </span>
                     <span className="text-gray-900">
-                      ₹{cgst.toLocaleString()}
+                      ₹
+                      {Number(
+                        tax.TaxValue ?? tax.TaxVaue ?? 0,
+                      ).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs ml-2">
-                    <span className="text-gray-600">SGST (9%)</span>
-                    <span className="text-gray-900">
-                      ₹{sgst.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              );
-            }
+                ))}
+              </div>
+            );
           })}
         </div>
       )}
@@ -357,9 +334,9 @@ const roomCharges = selectedRooms.reduce((sum, room) => {
         className={`flex items-center justify-between ${isCheckout ? "pt-4 border-t border-gray-100" : "pb-4 border-b border-gray-200"} ${!isCheckout || showModifyButton ? "mb-4" : ""}`}
       >
         <span className="text-base font-semibold text-gray-900">Total INR</span>
-        <span className="text-xl font-bold text-gray-900">
-          ₹{totalPrice.toLocaleString()}
-        </span>
+       <span className="text-xl font-bold text-gray-900">
+  {selectedRooms.length ? `₹${totalPrice.toLocaleString()}` : "₹0"}
+</span>
       </div>
 
       {/* Coupon Code - Only in default mode */}

@@ -24,7 +24,8 @@ const SearchFilter = ({ compact = false, onSearch = null }) => {
     return saved || new Date();
   });
   const [checkOut, setCheckOut] = useState(() => {
-
+    const saved = getCheckOutDate();
+    if (saved) return saved;
     const date = new Date();
     date.setDate(date.getDate() + 1);
     return date;

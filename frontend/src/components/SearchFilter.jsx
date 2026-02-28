@@ -24,8 +24,7 @@ const SearchFilter = ({ compact = false, onSearch = null }) => {
     return saved || new Date();
   });
   const [checkOut, setCheckOut] = useState(() => {
-    const saved = getCheckOutDate();
-    if (saved) return saved;
+
     const date = new Date();
     date.setDate(date.getDate() + 1);
     return date;
@@ -70,34 +69,7 @@ const SearchFilter = ({ compact = false, onSearch = null }) => {
     return date.toLocaleDateString("en-US", options);
   };
 
-  //   const handleCheckInSelect = (date) => {
-  //     console.log("date",date);
 
-  //   setCheckIn(date);
-  //   saveCheckInDate(date);
-  //     setCheckOut(date + 1);
-  //   saveCheckOutDate(date +1);
-
-  //   let finalCheckOut = checkOut;
-
-  //   if (checkOut <= date) {
-  //     finalCheckOut = new Date(date);
-  //     finalCheckOut.setDate(finalCheckOut.getDate() + 1);
-  //     setCheckOut(finalCheckOut);
-  //     saveCheckOutDate(finalCheckOut);
-  //   }
-
-  //   // 🔥 notify parent immediately
-  //   onSearch?.({
-  //     checkIn: date,
-  //     checkOut: finalCheckOut,
-  //     rooms,
-  //     adults,
-  //     children
-  //   });
-
-  //   setShowCheckInCalendar(false);
-  // };
   const handleCheckInSelect = (date) => {
     setCheckIn(date);
     saveCheckInDate(date);

@@ -74,7 +74,7 @@ const HotelDetailsPage = () => {
     const saved = getCheckOutDate();
     if (saved) return saved;
     const date = new Date();
-    date.setDate(date.getDate() + 4);
+    date.setDate(date.getDate() + 1);
     return date;
   });
 

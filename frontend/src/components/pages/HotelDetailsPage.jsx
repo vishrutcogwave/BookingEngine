@@ -33,6 +33,7 @@ import {
   saveHotelId,
 } from "../../utils/bookingStorage";
 import { useToast } from "../../hooks/useToast";
+import Footer from "../Footer";
 
 const HotelDetailsPage = () => {
   const { id } = useParams();
@@ -68,11 +69,10 @@ const HotelDetailsPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [roomTaxes, setRoomTaxes] = useState([]);
   const [checkInDate, setCheckInDate] = useState(
-    () => getCheckInDate() || new Date(),
+    new Date(),
   );
   const [checkOutDate, setCheckOutDate] = useState(() => {
-    const saved = getCheckOutDate();
-    if (saved) return saved;
+  
     const date = new Date();
     date.setDate(date.getDate() + 1);
     return date;
@@ -786,6 +786,7 @@ const newRoom = {
           </div>
         </div>
       </div>
+      <Footer/>
     </div>
   );
 };

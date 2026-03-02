@@ -85,7 +85,6 @@ useEffect(() => {
   const totalPrice = selectedRooms.length
   ? roomCharges + totalTaxAmount
   : 0;
-  console.log("totalPrice", totalPrice);
 
   // Calculate totals
   const totalRooms = selectedRooms.reduce(

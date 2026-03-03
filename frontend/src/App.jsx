@@ -12,6 +12,7 @@ import RefundPolicyPage from "./components/pages/RefundPolicyPage";
 import TermsAndConditionsPage from "./components/pages/TermsAndConditionsPage";
 import Footer from "./components/Footer";
 import ContactPage from "./components/pages/ContactPage";
+import HotelDetailsLayout from "./components/HotelDetailsLayout";
 
 function App() {
   return (
@@ -20,7 +21,7 @@ function App() {
         <ToastContainer />
         <Routes>
           <Route path="/" element={<HomeRedirect />} />
-          <Route path="/hotel/:id" element={<HotelDetailsPage />} />
+          <Route path="/hotel/:id" element={<HotelDetailsLayout />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
           <Route path="/api-test" element={<ApiTestPage />} />

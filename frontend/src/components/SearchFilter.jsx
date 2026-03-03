@@ -20,12 +20,11 @@ const SearchFilter = ({ compact = false, onSearch = null }) => {
   // Initialize from localStorage if available
   const openCheckoutAfterCheckInRef = useRef(false);
   const [checkIn, setCheckIn] = useState(() => {
-    const saved = getCheckInDate();
-    return saved || new Date();
+
+    return new Date();
   });
   const [checkOut, setCheckOut] = useState(() => {
-    const saved = getCheckOutDate();
-    if (saved) return saved;
+   
     const date = new Date();
     date.setDate(date.getDate() + 1);
     return date;

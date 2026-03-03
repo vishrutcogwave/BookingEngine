@@ -51,14 +51,7 @@ const HotelDetailsPage = () => {
   // ===== ROOM HOLD SESSION =====
 
   // Load initial values from localStorage
-  const [selectedRooms, setSelectedRooms] = useState(() => {
-    // Only load rooms if they're for the same hotel
-    const savedHotelId = getHotelId();
-    if (savedHotelId === id) {
-      return getSelectedRooms() || [];
-    }
-    return [];
-  });
+  const [selectedRooms, setSelectedRooms] = useState([]);
 
   const [selectedRoomsApiparmas, setselectedRoomsApiparmas] = useState([]);
 
@@ -357,27 +350,22 @@ const newRoom = {
     return updated;
   });
 };
+useEffect(() => {
+  const handleDateChange = (event) => {
+    const { checkIn, checkOut } = event.detail;
 
-  // const handleSearchFilterChange = (searchData) => {
-  //   // Clear selected rooms IMMEDIATELY when dates change
-  //   setSelectedRooms([]);
-  //   saveSelectedRooms([]);
-
-  //   // Then update dates
-  //   setCheckInDate(searchData.checkIn);
-  //   setCheckOutDate(searchData.checkOut);
-  //   saveCheckInDate(searchData.checkIn);
-  //   saveCheckOutDate(searchData.checkOut);
-  // };
-  const handleSearchFilterChange = useCallback(({ checkIn, checkOut }) => {
-    // clear rooms because availability changes
     setSelectedRooms([]);
     saveSelectedRooms([]);
 
-    // update dates → API will trigger automatically
     setCheckInDate(checkIn);
     setCheckOutDate(checkOut);
-  }, []);
+  };
+
+  window.addEventListener("hotel-date-change", handleDateChange);
+
+  return () =>
+    window.removeEventListener("hotel-date-change", handleDateChange);
+}, []);
   // Refs for each section
   const overviewRef = useRef(null);
   const amenitiesRef = useRef(null);
@@ -597,7 +585,7 @@ const newRoom = {
   if (loading) {
     return (
       <div className="min-h-screen bg-clarity-white">
-        <Navbar />
+        {/* <Navbar /> */}
         <div className="flex items-center justify-center py-24">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cogwave-blue mx-auto mb-4"></div>
@@ -610,20 +598,9 @@ const newRoom = {
 
   return (
     <div className="min-h-screen bg-clarity-white">
-      <Navbar />
 
       {/* Hero Section with Overlaying Search Filter */}
-      <div className="relative">
-        {/* Cogwave Blue Background - Reduced */}
-        <div className="bg-cogwave-blue h-20"></div>
 
-        {/* Overlaying Search Filter */}
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="relative -mt-12">
-            <SearchFilter compact={true} onSearch={handleSearchFilterChange} />
-          </div>
-        </div>
-      </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-6 mt-6">

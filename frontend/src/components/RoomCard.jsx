@@ -326,7 +326,7 @@ const RoomCard = ({
             {images.length > 1 && (
               <button
                 onClick={handlePrevImage}
-                className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 text-white w-7 h-7 rounded-full flex items-center justify-center transition"
               >
                 ‹
               </button>
@@ -336,7 +336,7 @@ const RoomCard = ({
             {images.length > 1 && (
               <button
                 onClick={handleNextImage}
-                className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 text-white w-7 h-7 rounded-full flex items-center justify-center transition"
               >
                 ›
               </button>

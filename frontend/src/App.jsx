@@ -11,6 +11,7 @@ import PrivacyPolicyPage from "./components/pages/PrivacyPolicyPage";
 import RefundPolicyPage from "./components/pages/RefundPolicyPage";
 import TermsAndConditionsPage from "./components/pages/TermsAndConditionsPage";
 import Footer from "./components/Footer";
+import ContactPage from "./components/pages/ContactPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/api-test" element={<ApiTestPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route
             path="/terms-conditions"
             element={<TermsAndConditionsPage />}

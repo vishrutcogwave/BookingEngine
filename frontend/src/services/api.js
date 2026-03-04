@@ -1,5 +1,7 @@
 // const API_BASE_URL = 'https://onlinebooking.cogwave.in';
-const API_BASE_URL = 'https://pousadabookingapi.cogwave.in'
+// const API_BASE_URL = 'https://pousadabookingapi.cogwave.in'
+const API_BASE_URL = 'https://rainbowbookingapi.cogwave.in'
+
 /**
  * Fetch hotel ID
  * This endpoint might return hotel IDs based on search criteria
@@ -33,6 +35,92 @@ export const getHotelId = async () => {
   }
 };
 
+export const getPrivacyPolicy = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/bookingengine/getpolicy`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch privacy policy (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching privacy policy:", error);
+    throw error;
+  }
+};
+export const getTermsAndConditions = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/bookingengine/getterms`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch terms and conditions (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching terms and conditions:", error);
+    throw error;
+  }
+};
+
+export const getRefundPolicy = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/bookingengine/getrefundpolicy`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch refund policy (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching refund policy:", error);
+    throw error;
+  }
+};
+
+export const getContactInfo = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/bookingengine/getcontact`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch contact info (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching contact info:", error);
+    throw error;
+  }
+};
 
 export const getTaxAmount = async (amount) => {
   console.log("ammount",amount);

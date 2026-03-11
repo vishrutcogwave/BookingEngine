@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect ,useMemo} from 'react';
 import { ChevronDown, Mail, X } from 'lucide-react';
 import Navbar from '../Navbar';
 import BookingSummary from '../BookingSummary';
@@ -123,9 +123,9 @@ const CheckoutPage = () => {
     };
   };
 
-  const bookingData = getBookingData();
+ const bookingData = useMemo(() => getBookingData(), []);
   const hotel = bookingData.hotel;
-  const selectedRooms = bookingData.selectedRooms;
+const selectedRooms = bookingData.selectedRooms || [];
   const checkInDate = new Date(bookingData.checkInDate);
   const checkOutDate = new Date(bookingData.checkOutDate);
   const numNights = bookingData.numNights;

@@ -70,7 +70,7 @@ useEffect(() => {
   };
 
   fetchRoomTaxes();
-}, [JSON.stringify(selectedRooms.map(r => r.id)), numNights]);
+}, [JSON.stringify(selectedRooms), numNights]);
   const totalTaxAmount = roomTaxesApi.reduce((sum, room) => {
   const roomTax = room.taxes.reduce(
     (taxSum, tax) => taxSum + Number(tax.TaxValue ?? tax.TaxVaue ?? 0),

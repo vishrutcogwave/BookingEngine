@@ -1,9 +1,9 @@
-// const API_BASE_URL = 'https://onlinebooking.cogwave.in';
+const API_BASE_URL = 'https://onlinebooking.cogwave.in';
 // const API_BASE_URL = 'https://pousadabookingapi.cogwave.in'
 // const API_BASE_URL = 'https://rainbowbookingapi.cogwave.in'
 
 // const API_BASE_URL = 'https://mayansresortapi.cogwave.in';
-const API_BASE_URL = 'https://kusumresortsbookingapi.cogwave.in';
+// const API_BASE_URL = 'https://kusumresortsbookingapi.cogwave.in';
 
 
 /**
@@ -612,6 +612,8 @@ export const phonePeWebhook = async (token, paymentData = {}) => {
  * @returns {Promise<Object>} API response
  */
 export const sendBookingConfirmation = async (confirmationData) => {
+  console.log("confirmationData",confirmationData);
+  
   debugger
   try {
     // console.log('═'.repeat(80));

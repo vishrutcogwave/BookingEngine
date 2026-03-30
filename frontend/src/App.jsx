@@ -24,6 +24,7 @@ function App() {
           <Route path="/hotel/:id" element={<HotelDetailsLayout />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/payment-success" element={<PaymentSuccessPage />} />
+          <Route path="/payment-cancel" element={<PaymentSuccessPage />} />
           <Route path="/api-test" element={<ApiTestPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/refund-policy" element={<RefundPolicyPage />} />

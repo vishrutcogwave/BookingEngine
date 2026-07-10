@@ -48,25 +48,50 @@ const RoomCard = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Helper function to get price based on occupancy
-  const getPriceForOccupancy = (ratePlan, adults, children) => {
-    const totalOccupancy = adults + children;
-    if (!ratePlan?.PriceDetails || ratePlan.PriceDetails.length === 0) {
-      return {
-        originalPrice: room.originalPrice || 0,
-        offerPrice: room.price || 0,
-      };
-    }
-
-    // Find the price detail matching the occupancy
-    const priceDetail =
-      ratePlan.PriceDetails.find((pd) => pd.RatePax === totalOccupancy) ||
-      ratePlan.PriceDetails[ratePlan.PriceDetails.length - 1]; // Fallback to highest
-
+// Helper function to get price based on occupancy
+const getPriceForOccupancy = (ratePlan, adults, children) => {
+  if (!ratePlan?.PriceDetails?.length) {
     return {
-      originalPrice: priceDetail?.PricePerNight || room.originalPrice || 0,
-      offerPrice: priceDetail?.OfferPricePerNight || room.price || 0,
+      originalPrice: room.originalPrice || 0,
+      offerPrice: room.price || 0,
     };
+  }
+
+  // Get first day's pricing
+  const prices = ratePlan.PriceDetails[0]?.Prices?.[0];
+
+  if (!prices) {
+    return {
+      originalPrice: room.originalPrice || 0,
+      offerPrice: room.price || 0,
+    };
+  }
+
+  // Pricing based on adults count
+  const occupancyPrice = prices[String(adults)];
+
+  if (!occupancyPrice) {
+    return {
+      originalPrice: room.originalPrice || 0,
+      offerPrice: room.price || 0,
+    };
+  }
+
+const adultPrice = Number(occupancyPrice.AdultPrice || 0);
+
+// Child price depends on how many children are selected
+const childPrice =
+  children > 0
+    ? Number(prices[String(children)]?.ChildPrice || 0)
+    : 0;
+
+const totalPrice = adultPrice + childPrice;
+
+  return {
+    originalPrice: totalPrice,
+    offerPrice: totalPrice,
   };
+};
 
   // Sync with parent's selectedRooms whenever they change
   useEffect(() => {
@@ -107,143 +132,164 @@ const RoomCard = ({
     e.stopPropagation(); // prevent modal open
     setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
-  const handleBookRoom = (withBreakfast = false) => {
-    // Check if opposite variant is already selected
-    const oppositeVariantExists = withBreakfast
-      ? selectedRooms.some((r) => !r.withBreakfast)
-      : selectedRooms.some((r) => r.withBreakfast);
+const handleBookRoom = (withBreakfast = false) => {
+  // Check if opposite variant is already selected
+  const oppositeVariantExists = withBreakfast
+    ? selectedRooms.some((r) => !r.withBreakfast)
+    : selectedRooms.some((r) => r.withBreakfast);
 
-    if (oppositeVariantExists) {
-      alert(
-        `You can only select one type of this room. Please remove the "${withBreakfast ? "Room Only" : "Room with Breakfast"}" variant first.`,
-      );
-      return;
-    }
-
-    // Check if we've reached the availability limit
-    if (
-      room.available !== undefined &&
-      selectedRooms.length >= room.available
-    ) {
-      alert(`Only ${room.available} rooms available. Cannot add more.`);
-      return;
-    }
-
-    const roomId = `${room.id}-${withBreakfast}-${Date.now()}`;
-    const ratePlan = withBreakfast
-      ? room.ratePlans?.find((rp) => rp.RateShortName === "Room with Breakfast")
-      : room.ratePlans?.find((rp) => rp.RateShortName === "Room Only");
-
-    const pricing = getPriceForOccupancy(
-      ratePlan,
-      room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-      0,
+  if (oppositeVariantExists) {
+    alert(
+      `You can only select one type of this room. Please remove the "${
+        withBreakfast ? "Room Only" : "Room with Breakfast"
+      }" variant first.`,
     );
+    return;
+  }
 
-    const newRoom = {
-      id: roomId,
-      withBreakfast,
-      adults: room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-      children: 0,
-      roomNumber: selectedRooms.length + 1,
-      ratePlanId: ratePlan?.RatePlanId,
-      rateShortName: ratePlan?.RateShortName,
-    };
+  // Check if we've reached the availability limit
+  if (
+    room.available !== undefined &&
+    selectedRooms.length >= room.available
+  ) {
+    alert(`Only ${room.available} rooms available. Cannot add more.`);
+    return;
+  }
 
-    setSelectedRooms([...selectedRooms, newRoom]);
-    setSelectedRatePlan(withBreakfast ? "breakfast" : "only");
+  const roomId = `${room.id}-${withBreakfast}-${Date.now()}`;
 
-    if (withBreakfast) {
-      setRoomIdBreakfast(roomId);
-    } else {
-      setRoomIdOnly(roomId);
-    }
-
-    onSelectRoom &&
-      onSelectRoom(
-        room,
-        withBreakfast,
-        room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-        roomId,
-        ratePlan,
-        pricing.offerPrice,
-        pricing.originalPrice,
+  const ratePlan = withBreakfast
+    ? room.ratePlans?.find(
+        (rp) => rp.RateShortName === "Room with Breakfast"
+      )
+    : room.ratePlans?.find(
+        (rp) => rp.RateShortName === "Room Only"
       );
+
+  const defaultAdults =
+    room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1;
+
+  const pricing = getPriceForOccupancy(
+    ratePlan,
+    defaultAdults,
+    0
+  );
+
+  const newRoom = {
+    id: roomId,
+    withBreakfast,
+    adults: defaultAdults,
+    children: 0,
+    roomNumber: selectedRooms.length + 1,
+    ratePlanId: ratePlan?.RatePlanId,
+    rateShortName: ratePlan?.RateShortName,
   };
 
-  const handleAddMoreRooms = (withBreakfast) => {
-    // Check if we've reached the availability limit
-    if (
-      room.available !== undefined &&
-      selectedRooms.length >= room.available
-    ) {
-      alert(`Only ${room.available} rooms available. Cannot add more.`);
-      return;
-    }
+  setSelectedRooms((prev) => [...prev, newRoom]);
+  setSelectedRatePlan(withBreakfast ? "breakfast" : "only");
 
-    const roomId = `${room.id}-${withBreakfast}-${Date.now()}`;
-    const ratePlan = withBreakfast
-      ? room.ratePlans?.find((rp) => rp.RateShortName === "Room with Breakfast")
-      : room.ratePlans?.find((rp) => rp.RateShortName === "Room Only");
+  if (withBreakfast) {
+    setRoomIdBreakfast(roomId);
+  } else {
+    setRoomIdOnly(roomId);
+  }
 
-    const defaultAdults = room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1;
+  onSelectRoom?.(
+    room,
+    withBreakfast,
+    defaultAdults,
+    roomId,
+    ratePlan,
+    pricing.offerPrice,
+    pricing.originalPrice
+  );
+};
+const handleAddMoreRooms = (withBreakfast) => {
+  // Check if we've reached the availability limit
+  if (
+    room.available !== undefined &&
+    selectedRooms.length >= room.available
+  ) {
+    alert(`Only ${room.available} rooms available. Cannot add more.`);
+    return;
+  }
 
-    const pricing = getPriceForOccupancy(ratePlan, defaultAdults, 0);
+  const roomId = `${room.id}-${withBreakfast}-${Date.now()}`;
 
-    const newRoom = {
-      id: roomId,
-      withBreakfast,
-      adults: room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-      children: 0,
-      roomNumber: selectedRooms.length + 1,
-      ratePlanId: ratePlan?.RatePlanId,
-      rateShortName: ratePlan?.RateShortName,
-    };
-
-    setSelectedRooms([...selectedRooms, newRoom]);
-    onSelectRoom &&
-      onSelectRoom(
-        room,
-        withBreakfast,
-        room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-        roomId,
-        ratePlan,
-        pricing.offerPrice,
-        pricing.originalPrice,
+  const ratePlan = withBreakfast
+    ? room.ratePlans?.find(
+        (rp) => rp.RateShortName === "Room with Breakfast"
+      )
+    : room.ratePlans?.find(
+        (rp) => rp.RateShortName === "Room Only"
       );
-    onRoomCountChange &&
-  onRoomCountChange(roomId, defaultAdults, 0, pricing.offerPrice);
+
+  const defaultAdults =
+    room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1;
+
+  const pricing = getPriceForOccupancy(
+    ratePlan,
+    defaultAdults,
+    0
+  );
+
+  const newRoom = {
+    id: roomId,
+    withBreakfast,
+    adults: defaultAdults,
+    children: 0,
+    roomNumber: selectedRooms.length + 1,
+    ratePlanId: ratePlan?.RatePlanId,
+    rateShortName: ratePlan?.RateShortName,
   };
 
+  setSelectedRooms((prev) => [...prev, newRoom]);
+
+  onSelectRoom?.(
+    room,
+    withBreakfast,
+    defaultAdults,
+    roomId,
+    ratePlan,
+    pricing.offerPrice,
+    pricing.originalPrice
+  );
+
+  onRoomCountChange?.(
+    roomId,
+    defaultAdults,
+    0,
+    pricing.offerPrice,
+    pricing.originalPrice
+  );
+};
 
 
-  const handleRemoveRoom = (roomId) => {
-    const updatedRooms = selectedRooms.filter((r) => r.id !== roomId);
-    setSelectedRooms(updatedRooms);
+const handleRemoveRoom = (roomId) => {
+  const updatedRooms = selectedRooms.filter((r) => r.id !== roomId);
+  setSelectedRooms(updatedRooms);
 
-    // Check if there are any remaining rooms of either type
-    const hasRoomOnly = updatedRooms.some((r) => !r.withBreakfast);
-    const hasBreakfast = updatedRooms.some((r) => r.withBreakfast);
+  const hasRoomOnly = updatedRooms.some((r) => !r.withBreakfast);
+  const hasBreakfast = updatedRooms.some((r) => r.withBreakfast);
 
-    // Reset roomId trackers if needed
-    if (roomId === roomIdOnly && !hasRoomOnly) {
-      setRoomIdOnly(null);
-    }
-    if (roomId === roomIdBreakfast && !hasBreakfast) {
-      setRoomIdBreakfast(null);
-    }
+  if (roomId === roomIdOnly && !hasRoomOnly) {
+    setRoomIdOnly(null);
+  }
 
-    // Reset selectedRatePlan if no rooms of that type remain
-    if (selectedRatePlan === "only" && !hasRoomOnly) {
-      setSelectedRatePlan(null);
-    }
-    if (selectedRatePlan === "breakfast" && !hasBreakfast) {
-      setSelectedRatePlan(null);
-    }
+  if (roomId === roomIdBreakfast && !hasBreakfast) {
+    setRoomIdBreakfast(null);
+  }
 
-    onDeleteRoom && onDeleteRoom(roomId);
-  };
+  if (selectedRatePlan === "only" && !hasRoomOnly) {
+    setSelectedRatePlan(null);
+  }
 
+  if (selectedRatePlan === "breakfast" && !hasBreakfast) {
+    setSelectedRatePlan(null);
+  }
+
+  onDeleteRoom?.(roomId);
+};
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
       <div className="flex flex-col md:flex-row gap-3 sm:gap-4 p-3 sm:p-4">
@@ -345,69 +391,61 @@ const RoomCard = ({
 
             {/* Price and Booking Row */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {(() => {
-                  const roomOnlyPlan = room.ratePlans?.find(
-                    (rp) => rp.RateShortName === "Room Only",
-                  );
-                  const pricing = getPriceForOccupancy(
-                    roomOnlyPlan,
-                    room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-                    0,
-                  );
-                  const hasDiscount =
-                    pricing.originalPrice > pricing.offerPrice;
-                  return (
-                    <>
-                      {hasDiscount && (
-                        <span className="text-sm text-gray-400 line-through">
-                          ₹{pricing.originalPrice}
-                        </span>
-                      )}
-                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                        ₹{pricing.offerPrice}
-                      </span>
-                      <span className="text-xs text-gray-500">/ Night</span>
-                      {hasDiscount && (
-                        <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded">
-                          {Math.round(
-                            ((pricing.originalPrice - pricing.offerPrice) /
-                              pricing.originalPrice) *
-                              100,
-                          )}
-                          % off
-                        </span>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-              <button
-                onClick={() => handleBookRoom(false)}
-                disabled={
-                  selectedRatePlan === "only" ||
-                  selectedRooms.some((r) => r.withBreakfast) ||
-                  (room.available !== undefined &&
-                    selectedRooms.length >= room.available)
-                }
-                className={`w-full sm:w-auto px-4 sm:px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedRatePlan === "only" ||
-                  selectedRooms.some((r) => r.withBreakfast) ||
-                  (room.available !== undefined &&
-                    selectedRooms.length >= room.available)
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-900 text-white hover:bg-gray-800"
-                }`}
-              >
-                {room.available !== undefined &&
-                selectedRooms.length >= room.available
-                  ? "Sold Out"
-                  : selectedRatePlan === "only"
-                    ? "Added"
-                    : "Book Room"}
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">(Exclusive of Taxes)</p>
+            <div className="flex items-center gap-2 flex-wrap">
+  {(() => {
+    const roomOnlyPlan = room.ratePlans?.find(
+      (rp) => rp.RateShortName === "Room Only"
+    );
+
+const pax1Price =
+  roomOnlyPlan?.PriceDetails?.[0]?.Prices?.[0]?.["1"]?.AdultPrice || 0;
+
+    return (
+      <>
+   
+
+        <span className="text-xl sm:text-2xl font-bold text-gray-900">
+      ₹{Number(pax1Price).toLocaleString()}
+        </span>
+
+        <span className="text-xs text-gray-500">
+          / Head
+        </span>
+
+      
+      </>
+    );
+  })()}
+</div>
+           <button
+  onClick={() => handleBookRoom(false)}
+  disabled={
+    selectedRatePlan === "only" ||
+    selectedRooms.some((r) => r.withBreakfast) ||
+    (room.available !== undefined &&
+      selectedRooms.length >= room.available)
+  }
+  className={`w-full sm:w-auto px-4 sm:px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+    selectedRatePlan === "only" ||
+    selectedRooms.some((r) => r.withBreakfast) ||
+    (room.available !== undefined &&
+      selectedRooms.length >= room.available)
+      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+      : "bg-gray-900 text-white hover:bg-gray-800"
+  }`}
+>
+  {room.available !== undefined &&
+  selectedRooms.length >= room.available
+    ? "Sold Out"
+    : selectedRatePlan === "only"
+      ? "Added"
+      : "Book Room"}
+</button>
+</div>
+
+<p className="text-xs text-gray-500 mt-1">
+  (Exclusive of Taxes)
+</p>
 
             {/* Selected Rooms - Room Only */}
             {selectedRatePlan === "only" && selectedRooms.length > 0 && (
@@ -429,195 +467,221 @@ const RoomCard = ({
 
                           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                             {/* Left: Combined Counter */}
-                            <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedRooms((prev) => {
-                                    const updated = prev.map((r) => {
-                                      if (
-                                        r.id === selectedRoom.id &&
-                                        r.adults > 1
-                                      ) {
-                                        const newAdults = r.adults - 1;
-                                        const roomOnlyPlan =
-                                          room.ratePlans?.find(
-                                            (rp) =>
-                                              rp.RateShortName === "Room Only",
-                                          );
-                                        const pricing = getPriceForOccupancy(
-                                          roomOnlyPlan,
-                                          newAdults,
-                                          r.children,
-                                        );
-                                        onRoomCountChange &&
-                                          onRoomCountChange(
-                                            selectedRoom.id,
-                                            newAdults,
-                                            r.children,
-                                            pricing.offerPrice,
-                                          );
-                                        return { ...r, adults: newAdults };
-                                      }
-                                      return r;
-                                    });
-                                    return updated;
-                                  });
-                                }}
-                                disabled={selectedRoom.adults <= 1}
-                                className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                  selectedRoom.adults <= 1
-                                    ? "text-gray-300 cursor-not-allowed"
-                                    : "text-gray-700 hover:text-gray-900"
-                                }`}
-                              >
-                                −
-                              </button>
-                              <span className="text-sm font-semibold text-gray-900 px-2 text-center whitespace-nowrap">
-                                {selectedRoom.adults}{" "}
-                                {selectedRoom.adults === 1 ? "Adult" : "Adults"}
-                              </span>
-                              <button
-                                onClick={() => {
-                                  setSelectedRooms((prev) => {
-                                    const updated = prev.map((r) => {
-                                      if (
-                                        r.id === selectedRoom.id &&
-                                        r.adults <
-                                          room?.roomTypeData?.MaxOccupancy
-                                            ?.Adults
-                                      ) {
-                                        const newAdults = r.adults + 1;
-                                        const roomOnlyPlan =
-                                          room.ratePlans?.find(
-                                            (rp) =>
-                                              rp.RateShortName === "Room Only",
-                                          );
-                                        const pricing = getPriceForOccupancy(
-                                          roomOnlyPlan,
-                                          newAdults,
-                                          r.children,
-                                        );
-                                        onRoomCountChange &&
-                                          onRoomCountChange(
-                                            selectedRoom.id,
-                                            newAdults,
-                                            r.children,
-                                            pricing.offerPrice,
-                                          );
-                                        return { ...r, adults: newAdults };
-                                      }
-                                      return r;
-                                    });
-                                    return updated;
-                                  });
-                                }}
-                                disabled={
-                                  selectedRoom.adults >=
-                                  (room?.roomTypeData?.MaxOccupancy?.Adults ||
-                                    1)
-                                }
-                                className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                  selectedRoom.adults >=
-                                  (room?.roomTypeData?.MaxOccupancy?.Adults ||
-                                    1)
-                                    ? "text-gray-300 cursor-not-allowed"
-                                    : "text-gray-700 hover:text-gray-900"
-                                }`}
-                              >
-                                +
-                              </button>
-                            </div>
+                          <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+  r.id === selectedRoom.id &&
+  r.adults >
+    (room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1)
+) {
+            const newAdults = r.adults - 1;
+
+            const roomOnlyPlan = room.ratePlans?.find(
+              (rp) => rp.RateShortName === "Room Only"
+            );
+
+            const pricing = getPriceForOccupancy(
+              roomOnlyPlan,
+              newAdults,
+              r.children
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              newAdults,
+              r.children,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              adults: newAdults,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={
+  selectedRoom.adults <=
+  (room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1)
+}
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+  selectedRoom.adults <=
+  (room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1)
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    −
+  </button>
+
+  <span className="text-sm font-semibold text-gray-900 px-2 text-center whitespace-nowrap">
+    {selectedRoom.adults}{" "}
+    {selectedRoom.adults === 1 ? "Adult" : "Adults"}
+  </span>
+
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.adults <
+              (room?.roomTypeData?.MaxOccupancy?.Adults || 1)
+          ) {
+            const newAdults = r.adults + 1;
+
+            const roomOnlyPlan = room.ratePlans?.find(
+              (rp) => rp.RateShortName === "Room Only"
+            );
+
+            const pricing = getPriceForOccupancy(
+              roomOnlyPlan,
+              newAdults,
+              r.children
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              newAdults,
+              r.children,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              adults: newAdults,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={
+      selectedRoom.adults >=
+      (room?.roomTypeData?.MaxOccupancy?.Adults || 1)
+    }
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+      selectedRoom.adults >=
+      (room?.roomTypeData?.MaxOccupancy?.Adults || 1)
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    +
+  </button>
+</div>
 
                             {/* Right: Children Counter */}
-                            <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedRooms((prev) => {
-                                    const updated = prev.map((r) => {
-                                      if (
-                                        r.id === selectedRoom.id &&
-                                        r.children > 0
-                                      ) {
-                                        const newChildren = r.children - 1;
-                                        const roomOnlyPlan =
-                                          room.ratePlans?.find(
-                                            (rp) =>
-                                              rp.RateShortName === "Room Only",
-                                          );
-                                        const pricing = getPriceForOccupancy(
-                                          roomOnlyPlan,
-                                          r.adults,
-                                          newChildren,
-                                        );
-                                        onRoomCountChange &&
-                                          onRoomCountChange(
-                                            selectedRoom.id,
-                                            r.adults,
-                                            newChildren,
-                                            pricing.offerPrice,
-                                          );
-                                        return { ...r, children: newChildren };
-                                      }
-                                      return r;
-                                    });
-                                    return updated;
-                                  });
-                                }}
-                                disabled={selectedRoom.children <= 0}
-                                className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                  selectedRoom.children <= 0
-                                    ? "text-gray-300 cursor-not-allowed"
-                                    : "text-gray-700 hover:text-gray-900"
-                                }`}
-                              >
-                                −
-                              </button>
-                              <span className="text-xs sm:text-sm font-semibold text-gray-900 px-1 sm:px-2 text-center whitespace-nowrap">
-                                {selectedRoom.children} Child
-                              </span>
-                              <button
-                                onClick={() => {
-                                  setSelectedRooms((prev) => {
-                                    const updated = prev.map((r) => {
-                                      if (
-                                        r.id === selectedRoom.id &&
-                                        r.children < maxChildren
-                                      ) {
-                                        const newChildren = r.children + 1;
-                                        const roomOnlyPlan =
-                                          room.ratePlans?.find(
-                                            (rp) =>
-                                              rp.RateShortName === "Room Only",
-                                          );
-                                        const pricing = getPriceForOccupancy(
-                                          roomOnlyPlan,
-                                          r.adults,
-                                          newChildren,
-                                        );
-                                        onRoomCountChange &&
-                                          onRoomCountChange(
-                                            selectedRoom.id,
-                                            r.adults,
-                                            newChildren,
-                                            pricing.offerPrice,
-                                          );
-                                        return { ...r, children: newChildren };
-                                      }
-                                      return r;
-                                    });
-                                    return updated;
-                                  });
-                                }}
-                                disabled={selectedRoom.children >= maxChildren}
-                                className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                  selectedRoom.children >= maxChildren
-                                    ? "text-gray-300 cursor-not-allowed"
-                                    : "text-gray-700 hover:text-gray-900"
-                                }`}
-                              >
-                                +
-                              </button>
-                            </div>
+                        <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.children > 0
+          ) {
+            const newChildren = r.children - 1;
+
+            const roomOnlyPlan = room.ratePlans?.find(
+              (rp) => rp.RateShortName === "Room Only"
+            );
+
+            const pricing = getPriceForOccupancy(
+              roomOnlyPlan,
+              r.adults,
+              newChildren
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              r.adults,
+              newChildren,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              children: newChildren,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={selectedRoom.children <= 0}
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+      selectedRoom.children <= 0
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    −
+  </button>
+
+  <span className="text-xs sm:text-sm font-semibold text-gray-900 px-1 sm:px-2 text-center whitespace-nowrap">
+    {selectedRoom.children} Child
+  </span>
+
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.children < maxChildren
+          ) {
+            const newChildren = r.children + 1;
+
+            const roomOnlyPlan = room.ratePlans?.find(
+              (rp) => rp.RateShortName === "Room Only"
+            );
+
+            const pricing = getPriceForOccupancy(
+              roomOnlyPlan,
+              r.adults,
+              newChildren
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              r.adults,
+              newChildren,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              children: newChildren,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={selectedRoom.children >= maxChildren}
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+      selectedRoom.children >= maxChildren
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    +
+  </button>
+</div>
 
                             {/* Trash button */}
                             <button
@@ -645,47 +709,61 @@ const RoomCard = ({
                             </button>
 
                             {/* Price and Taxes */}
-                            {(() => {
-                              const roomOnlyPlan = room.ratePlans?.find(
-                                (rp) => rp.RateShortName === "Room Only",
-                              );
-                              const pricing = getPriceForOccupancy(
-                                roomOnlyPlan,
-                                selectedRoom.adults,
-                                selectedRoom.children,
-                              );
-                              return (
-                                <>
-                                  <span className="hidden sm:block text-sm font-bold text-gray-900 whitespace-nowrap">
-                                    ₹{pricing.offerPrice.toLocaleString()}{" "}
-                                    <span className="text-xs font-normal">
-                                      + Taxes (per night)
-                                    </span>
-                                  </span>
-                                </>
-                              );
-                            })()}
+                        {(() => {
+  const roomOnlyPlan = room.ratePlans?.find(
+    (rp) => rp.RateShortName === "Room Only"
+  );
+
+  const pricing = getPriceForOccupancy(
+    roomOnlyPlan,
+    selectedRoom.adults,
+    selectedRoom.children
+  );
+
+  return (
+    <span className="hidden sm:block text-sm font-bold text-gray-900 whitespace-nowrap">
+      ₹{pricing.offerPrice.toLocaleString()}
+      {pricing.originalPrice > pricing.offerPrice && (
+        <span className="ml-2 text-xs line-through text-gray-400">
+          ₹{pricing.originalPrice.toLocaleString()}
+        </span>
+      )}
+      <span className="text-xs font-normal">
+        {" "}+ Taxes (per night)
+      </span>
+    </span>
+  );
+})()}
                           </div>
 
                           {/* Price and Taxes - Mobile Only */}
-                          {(() => {
-                            const roomOnlyPlan = room.ratePlans?.find(
-                              (rp) => rp.RateShortName === "Room Only",
-                            );
-                            const pricing = getPriceForOccupancy(
-                              roomOnlyPlan,
-                              selectedRoom.adults,
-                              selectedRoom.children,
-                            );
-                            return (
-                              <span className="block sm:hidden text-sm font-bold text-gray-900 w-full">
-                                ₹{pricing.offerPrice.toLocaleString()}{" "}
-                                <span className="text-xs font-normal">
-                                  + Taxes (per night)
-                                </span>
-                              </span>
-                            );
-                          })()}
+                    {(() => {
+  const roomOnlyPlan = room.ratePlans?.find(
+    (rp) => rp.RateShortName === "Room Only"
+  );
+
+  const pricing = getPriceForOccupancy(
+    roomOnlyPlan,
+    selectedRoom.adults,
+    selectedRoom.children
+  );
+
+  return (
+    <span className="block sm:hidden text-sm font-bold text-gray-900 w-full">
+      ₹{pricing.offerPrice.toLocaleString()}
+
+      {pricing.originalPrice > pricing.offerPrice && (
+        <span className="ml-2 text-xs line-through text-gray-400">
+          ₹{pricing.originalPrice.toLocaleString()}
+        </span>
+      )}
+
+      <span className="text-xs font-normal">
+        {" "}+ Taxes (per night)
+      </span>
+    </span>
+  );
+})()}
                         </div>
                       </div>
                     );
@@ -709,70 +787,65 @@ const RoomCard = ({
               )}
 
               {/* Price and Booking Row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const breakfastPlan = room.ratePlans?.find(
-                      (rp) => rp.RateShortName === "Room with Breakfast",
-                    );
-                    const pricing = getPriceForOccupancy(
-                      breakfastPlan,
-                      room?.roomTypeData?.MaxOccupancy?.DefaultAdult,
-                      0,
-                    );
-                    const hasDiscount =
-                      pricing.originalPrice > pricing.offerPrice;
-                    return (
-                      <>
-                        {hasDiscount && (
-                          <span className="text-sm text-gray-400 line-through">
-                            ₹{pricing.originalPrice}
-                          </span>
-                        )}
-                        <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                          ₹{pricing.offerPrice}
-                        </span>
-                        <span className="text-xs text-gray-500">/ Night</span>
-                        {hasDiscount && (
-                          <span className="text-xs text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded">
-                            {Math.round(
-                              ((pricing.originalPrice - pricing.offerPrice) /
-                                pricing.originalPrice) *
-                                100,
-                            )}
-                            % off
-                          </span>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
+            <div className="flex items-center justify-between">
+  <div className="flex items-center gap-2 flex-wrap">
+    {(() => {
+      const breakfastPlan = room.ratePlans?.find(
+        (rp) => rp.RateShortName === "Room with Breakfast"
+      );
 
-                <button
-                  onClick={() => handleBookRoom(true)}
-                  disabled={
-                    selectedRatePlan === "breakfast" ||
-                    selectedRooms.some((r) => !r.withBreakfast) ||
-                    (room.available !== undefined &&
-                      selectedRooms.length >= room.available)
-                  }
-                  className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedRatePlan === "breakfast" ||
-                    selectedRooms.some((r) => !r.withBreakfast) ||
-                    (room.available !== undefined &&
-                      selectedRooms.length >= room.available)
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-gray-900 text-white hover:bg-gray-800"
-                  }`}
-                >
-                  {room.available !== undefined &&
-                  selectedRooms.length >= room.available
-                    ? "Sold Out"
-                    : selectedRatePlan === "breakfast"
-                      ? "Added"
-                      : "Book Room"}
-                </button>
-              </div>
+   const pax1Price =
+  breakfastPlan?.PriceDetails?.[0]?.Prices?.[0]?.["1"]?.AdultPrice || 0;
+
+
+
+
+
+
+
+
+      return (
+        <>
+       
+          <span className="text-xl sm:text-2xl font-bold text-gray-900">
+         ₹{Number(pax1Price).toLocaleString()}
+          </span>
+
+          <span className="text-xs text-gray-500">
+            / Head
+          </span>
+
+       
+        </>
+      );
+    })()}
+  </div>
+
+  <button
+    onClick={() => handleBookRoom(true)}
+    disabled={
+      selectedRatePlan === "breakfast" ||
+      selectedRooms.some((r) => !r.withBreakfast) ||
+      (room.available !== undefined &&
+        selectedRooms.length >= room.available)
+    }
+    className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+      selectedRatePlan === "breakfast" ||
+      selectedRooms.some((r) => !r.withBreakfast) ||
+      (room.available !== undefined &&
+        selectedRooms.length >= room.available)
+        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+        : "bg-gray-900 text-white hover:bg-gray-800"
+    }`}
+  >
+    {room.available !== undefined &&
+    selectedRooms.length >= room.available
+      ? "Sold Out"
+      : selectedRatePlan === "breakfast"
+        ? "Added"
+        : "Book Room"}
+  </button>
+</div>
               <p className="text-xs text-gray-500 mt-1">(Exclusive of Taxes)</p>
 
               {/* Selected Rooms - Room With Breakfast */}
@@ -795,210 +868,228 @@ const RoomCard = ({
 
                             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                               {/* Left: Combined Counter */}
-                              <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedRooms((prev) => {
-                                      const updated = prev.map((r) => {
-                                        if (
-                                          r.id === selectedRoom.id &&
-                                          r.adults > 1
-                                        ) {
-                                          const newAdults = r.adults - 1;
-                                          const breakfastPlan =
-                                            room.ratePlans?.find(
-                                              (rp) =>
-                                                rp.RateShortName ===
-                                                "Room with Breakfast",
-                                            );
-                                          const pricing = getPriceForOccupancy(
-                                            breakfastPlan,
-                                            newAdults,
-                                            r.children,
-                                          );
-                                          onRoomCountChange &&
-                                            onRoomCountChange(
-                                              selectedRoom.id,
-                                              newAdults,
-                                              r.children,
-                                              pricing.offerPrice,
-                                            );
-                                          return { ...r, adults: newAdults };
-                                        }
-                                        return r;
-                                      });
-                                      return updated;
-                                    });
-                                  }}
-                                  disabled={selectedRoom.adults <= 1}
-                                  className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                    selectedRoom.adults <= 1
-                                      ? "text-gray-300 cursor-not-allowed"
-                                      : "text-gray-700 hover:text-gray-900"
-                                  }`}
-                                >
-                                  −
-                                </button>
-                                <span className="text-sm font-semibold text-gray-900 px-2 text-center whitespace-nowrap">
-                                  {selectedRoom.adults}{" "}
-                                  {selectedRoom.adults === 1
-                                    ? "Adult"
-                                    : "Adults"}
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    setSelectedRooms((prev) => {
-                                      const updated = prev.map((r) => {
-                                        if (
-                                          r.id === selectedRoom.id &&
-                                          r.adults <
-                                            room?.roomTypeData?.MaxOccupancy
-                                              ?.Adults
-                                        ) {
-                                          const newAdults = r.adults + 1;
-                                          const breakfastPlan =
-                                            room.ratePlans?.find(
-                                              (rp) =>
-                                                rp.RateShortName ===
-                                                "Room with Breakfast",
-                                            );
-                                          const pricing = getPriceForOccupancy(
-                                            breakfastPlan,
-                                            newAdults,
-                                            r.children,
-                                          );
-                                          onRoomCountChange &&
-                                            onRoomCountChange(
-                                              selectedRoom.id,
-                                              newAdults,
-                                              r.children,
-                                              pricing.offerPrice,
-                                            );
-                                          return { ...r, adults: newAdults };
-                                        }
-                                        return r;
-                                      });
-                                      return updated;
-                                    });
-                                  }}
-                                  disabled={
-                                    selectedRoom.adults >=
-                                    (room?.roomTypeData?.MaxOccupancy?.Adults ||
-                                      1)
-                                  }
-                                  className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                    selectedRoom.adults >=
-                                    (room?.roomTypeData?.MaxOccupancy?.Adults ||
-                                      1)
-                                      ? "text-gray-300 cursor-not-allowed"
-                                      : "text-gray-700 hover:text-gray-900"
-                                  }`}
-                                >
-                                  +
-                                </button>
-                              </div>
+                         <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.adults > 1
+          ) {
+            const newAdults = r.adults - 1;
+
+            const breakfastPlan = room.ratePlans?.find(
+              (rp) =>
+                rp.RateShortName ===
+                "Room with Breakfast"
+            );
+
+            const pricing = getPriceForOccupancy(
+              breakfastPlan,
+              newAdults,
+              r.children
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              newAdults,
+              r.children,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              adults: newAdults,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={
+  selectedRoom.adults <=
+  (room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1)
+}
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+  selectedRoom.adults <=
+  (room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1)
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    −
+  </button>
+
+  <span className="text-sm font-semibold text-gray-900 px-2 text-center whitespace-nowrap">
+    {selectedRoom.adults}{" "}
+    {selectedRoom.adults === 1 ? "Adult" : "Adults"}
+  </span>
+
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.adults <
+              (room?.roomTypeData?.MaxOccupancy?.Adults || 1)
+          ) {
+            const newAdults = r.adults + 1;
+
+            const breakfastPlan = room.ratePlans?.find(
+              (rp) =>
+                rp.RateShortName ===
+                "Room with Breakfast"
+            );
+
+            const pricing = getPriceForOccupancy(
+              breakfastPlan,
+              newAdults,
+              r.children
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              newAdults,
+              r.children,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              adults: newAdults,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={
+      selectedRoom.adults >=
+      (room?.roomTypeData?.MaxOccupancy?.Adults || 1)
+    }
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+      selectedRoom.adults >=
+      (room?.roomTypeData?.MaxOccupancy?.Adults || 1)
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    +
+  </button>
+</div>
 
                               {/* Right: Children Counter */}
-                              <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedRooms((prev) => {
-                                      const updated = prev.map((r) => {
-                                        if (
-                                          r.id === selectedRoom.id &&
-                                          r.children > 0
-                                        ) {
-                                          const newChildren = r.children - 1;
-                                          const breakfastPlan =
-                                            room.ratePlans?.find(
-                                              (rp) =>
-                                                rp.RateShortName ===
-                                                "Room with Breakfast",
-                                            );
-                                          const pricing = getPriceForOccupancy(
-                                            breakfastPlan,
-                                            r.adults,
-                                            newChildren,
-                                          );
-                                          onRoomCountChange &&
-                                            onRoomCountChange(
-                                              selectedRoom.id,
-                                              r.adults,
-                                              newChildren,
-                                              pricing.offerPrice,
-                                            );
-                                          return {
-                                            ...r,
-                                            children: newChildren,
-                                          };
-                                        }
-                                        return r;
-                                      });
-                                      return updated;
-                                    });
-                                  }}
-                                  disabled={selectedRoom.children <= 0}
-                                  className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                    selectedRoom.children <= 0
-                                      ? "text-gray-300 cursor-not-allowed"
-                                      : "text-gray-700 hover:text-gray-900"
-                                  }`}
-                                >
-                                  −
-                                </button>
-                                <span className="text-xs sm:text-sm font-semibold text-gray-900 px-1 sm:px-2 text-center whitespace-nowrap">
-                                  {selectedRoom.children} Child
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    setSelectedRooms((prev) => {
-                                      const updated = prev.map((r) => {
-                                        if (
-                                          r.id === selectedRoom.id &&
-                                          r.children < maxChildren
-                                        ) {
-                                          const newChildren = r.children + 1;
-                                          const breakfastPlan =
-                                            room.ratePlans?.find(
-                                              (rp) =>
-                                                rp.RateShortName ===
-                                                "Room with Breakfast",
-                                            );
-                                          const pricing = getPriceForOccupancy(
-                                            breakfastPlan,
-                                            r.adults,
-                                            newChildren,
-                                          );
-                                          onRoomCountChange &&
-                                            onRoomCountChange(
-                                              selectedRoom.id,
-                                              r.adults,
-                                              newChildren,
-                                              pricing.offerPrice,
-                                            );
-                                          return {
-                                            ...r,
-                                            children: newChildren,
-                                          };
-                                        }
-                                        return r;
-                                      });
-                                      return updated;
-                                    });
-                                  }}
-                                  disabled={
-                                    selectedRoom.children >= maxChildren
-                                  }
-                                  className={`flex items-center justify-center font-bold text-sm sm:text-base ${
-                                    selectedRoom.children >= maxChildren
-                                      ? "text-gray-300 cursor-not-allowed"
-                                      : "text-gray-700 hover:text-gray-900"
-                                  }`}
-                                >
-                                  +
-                                </button>
-                              </div>
+                          <div className="border border-gray-400 rounded-full px-2 sm:px-3 py-1 flex items-center gap-1 sm:gap-2">
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.children > 0
+          ) {
+            const newChildren = r.children - 1;
 
+            const breakfastPlan = room.ratePlans?.find(
+              (rp) =>
+                rp.RateShortName ===
+                "Room with Breakfast"
+            );
+
+            const pricing = getPriceForOccupancy(
+              breakfastPlan,
+              r.adults,
+              newChildren
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              r.adults,
+              newChildren,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              children: newChildren,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={selectedRoom.children <= 0}
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+      selectedRoom.children <= 0
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    −
+  </button>
+
+  <span className="text-xs sm:text-sm font-semibold text-gray-900 px-1 sm:px-2 text-center whitespace-nowrap">
+    {selectedRoom.children} Child
+  </span>
+
+  <button
+    onClick={() => {
+      setSelectedRooms((prev) => {
+        return prev.map((r) => {
+          if (
+            r.id === selectedRoom.id &&
+            r.children < maxChildren
+          ) {
+            const newChildren = r.children + 1;
+
+            const breakfastPlan = room.ratePlans?.find(
+              (rp) =>
+                rp.RateShortName ===
+                "Room with Breakfast"
+            );
+
+            const pricing = getPriceForOccupancy(
+              breakfastPlan,
+              r.adults,
+              newChildren
+            );
+
+            onRoomCountChange?.(
+              selectedRoom.id,
+              r.adults,
+              newChildren,
+              pricing.offerPrice,
+              pricing.originalPrice
+            );
+
+            return {
+              ...r,
+              children: newChildren,
+            };
+          }
+
+          return r;
+        });
+      });
+    }}
+    disabled={selectedRoom.children >= maxChildren}
+    className={`flex items-center justify-center font-bold text-sm sm:text-base ${
+      selectedRoom.children >= maxChildren
+        ? "text-gray-300 cursor-not-allowed"
+        : "text-gray-700 hover:text-gray-900"
+    }`}
+  >
+    +
+  </button>
+</div>
                               {/* Trash button */}
                               <button
                                 onClick={() =>
@@ -1027,49 +1118,63 @@ const RoomCard = ({
                               </button>
 
                               {/* Price and Taxes */}
-                              {(() => {
-                                const breakfastPlan = room.ratePlans?.find(
-                                  (rp) =>
-                                    rp.RateShortName === "Room with Breakfast",
-                                );
-                                const pricing = getPriceForOccupancy(
-                                  breakfastPlan,
-                                  selectedRoom.adults,
-                                  selectedRoom.children,
-                                );
-                                return (
-                                  <>
-                                    <span className="hidden sm:block text-sm font-bold text-gray-900 whitespace-nowrap">
-                                      ₹{pricing.offerPrice.toLocaleString()}{" "}
-                                      <span className="text-xs font-normal">
-                                        + Taxes (per night)
-                                      </span>
-                                    </span>
-                                  </>
-                                );
-                              })()}
+                          {(() => {
+  const breakfastPlan = room.ratePlans?.find(
+    (rp) => rp.RateShortName === "Room with Breakfast"
+  );
+
+  const pricing = getPriceForOccupancy(
+    breakfastPlan,
+    selectedRoom.adults,
+    selectedRoom.children
+  );
+
+  return (
+    <span className="hidden sm:block text-sm font-bold text-gray-900 whitespace-nowrap">
+      ₹{pricing.offerPrice.toLocaleString()}
+
+      {pricing.originalPrice > pricing.offerPrice && (
+        <span className="ml-2 text-xs line-through text-gray-400">
+          ₹{pricing.originalPrice.toLocaleString()}
+        </span>
+      )}
+
+      <span className="text-xs font-normal">
+        {" "}+ Taxes (per night)
+      </span>
+    </span>
+  );
+})()}
                             </div>
 
                             {/* Price and Taxes - Mobile Only */}
-                            {(() => {
-                              const breakfastPlan = room.ratePlans?.find(
-                                (rp) =>
-                                  rp.RateShortName === "Room with Breakfast",
-                              );
-                              const pricing = getPriceForOccupancy(
-                                breakfastPlan,
-                                selectedRoom.adults,
-                                selectedRoom.children,
-                              );
-                              return (
-                                <span className="block sm:hidden text-sm font-bold text-gray-900 w-full">
-                                  ₹{pricing.offerPrice.toLocaleString()}{" "}
-                                  <span className="text-xs font-normal">
-                                    + Taxes (per night)
-                                  </span>
-                                </span>
-                              );
-                            })()}
+                        {(() => {
+  const breakfastPlan = room.ratePlans?.find(
+    (rp) => rp.RateShortName === "Room with Breakfast"
+  );
+
+  const pricing = getPriceForOccupancy(
+    breakfastPlan,
+    selectedRoom.adults,
+    selectedRoom.children
+  );
+
+  return (
+    <span className="block sm:hidden text-sm font-bold text-gray-900 w-full">
+      ₹{pricing.offerPrice.toLocaleString()}
+
+      {pricing.originalPrice > pricing.offerPrice && (
+        <span className="ml-2 text-xs line-through text-gray-400">
+          ₹{pricing.originalPrice.toLocaleString()}
+        </span>
+      )}
+
+      <span className="text-xs font-normal">
+        {" "}+ Taxes (per night)
+      </span>
+    </span>
+  );
+})()}
                           </div>
                         </div>
                       );

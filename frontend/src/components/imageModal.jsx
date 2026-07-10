@@ -35,17 +35,13 @@ const ImageModal = ({ images, isOpen, onClose, initialIndex = 0 }) => {
       </button>
 
       {/* Main Image */}
-      <div className="max-w-6xl max-h-[90vh] mx-auto px-4 sm:px-16 bg-white/5 backdrop-blur-sm rounded-2xl p-3 sm:p-6 border border-white/10 shadow-2xl">
-        <img
-          src={images[currentIndex]}
-          alt={`Hotel view ${currentIndex + 1}`}
-          className="w-full h-full object-contain rounded-lg"
-        />
-        <div className="text-center mt-4 text-white font-medium bg-white/10 backdrop-blur-sm py-2 rounded-lg">
-          {currentIndex + 1} / {images.length}
-        </div>
-      </div>
-
+<div className="w-[90vw] h-[85vh] flex items-center justify-center">
+  <img
+    src={images[currentIndex]}
+    alt={`Hotel view ${currentIndex + 1}`}
+    className="max-w-full max-h-full object-contain"
+  />
+</div>
       {/* Next Button */}
       <button
         onClick={handleNext}

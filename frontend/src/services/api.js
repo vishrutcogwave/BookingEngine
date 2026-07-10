@@ -2,10 +2,10 @@
 // const API_BASE_URL = 'https://pousadabookingapi.cogwave.in'
 // const API_BASE_URL = 'https://rainbowbookingapi.cogwave.in'
 
-// const API_BASE_URL = 'https://mayansresortapi.cogwave.in';
+const API_BASE_URL = 'https://mayansresortapi.cogwave.in';
 // const API_BASE_URL = 'https://kusumresortsbookingapi.cogwave.in';
 
-const API_BASE_URL="https://srcloudbookingapi.cogwave.in"
+// const API_BASE_URL="https://srcloudbookingapi.cogwave.in"
 /**
  * Fetch hotel ID
  * This endpoint might return hotel IDs based on search criteria

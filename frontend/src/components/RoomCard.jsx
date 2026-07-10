@@ -215,70 +215,7 @@ const RoomCard = ({
   onRoomCountChange(roomId, defaultAdults, 0, pricing.offerPrice);
   };
 
-  // const handleAddChild = (roomId) => {
-  //   setSelectedRooms((prev) => {
-  //     const updated = prev.map((r) => {
-  //       if (r.id === roomId && r.children < 1) {
-  //         return { ...r, children: r.children + 1 };
-  //       }
-  //       return r;
-  //     });
-  //     const room = updated.find((r) => r.id === roomId);
-  //     if (room) {
-  //       onRoomCountChange &&
-  //         onRoomCountChange(roomId, room.adults, room.children);
-  //     }
-  //     return updated;
-  //   });
-  // };
 
-  // const handleIncrementCount = (roomId) => {
-  //   setSelectedRooms((prev) => {
-  //     const updated = prev.map((r) => {
-  //       if (r.id === roomId) {
-  //         // Get max children from room data
-  //         const maxChildren = room?.roomTypeData?.MaxOccupancy?.Children || 1;
-  //         // First priority: increment adults up to 2
-  //         if (r.adults < room?.roomTypeData?.MaxOccupancy?.Adults) {
-  //           return { ...r, adults: r.adults + 1 };
-  //         }
-  //         // Then allow adding children (up to maxChildren)
-  //         else if (r.children < maxChildren) {
-  //           return { ...r, children: r.children + 1 };
-  //         }
-  //       }
-  //       return r;
-  //     });
-  //     const room_obj = updated.find((r) => r.id === roomId);
-  //     if (room_obj) {
-  //       onRoomCountChange &&
-  //         onRoomCountChange(roomId, room_obj.adults, room_obj.children);
-  //     }
-  //     return updated;
-  //   });
-  // };
-
-  // const handleDecrementCount = (roomId) => {
-  //   setSelectedRooms((prev) => {
-  //     const updated = prev.map((r) => {
-  //       if (r.id === roomId) {
-  //         // Remove in reverse order: child first, then adult (min 1)
-  //         if (r.children > 0) {
-  //           return { ...r, children: r.children - 1 };
-  //         } else if (r.adults > 1) {
-  //           return { ...r, adults: r.adults - 1 };
-  //         }
-  //       }
-  //       return r;
-  //     });
-  //     const room = updated.find((r) => r.id === roomId);
-  //     if (room) {
-  //       onRoomCountChange &&
-  //         onRoomCountChange(roomId, room.adults, room.children);
-  //     }
-  //     return updated;
-  //   });
-  // };
 
   const handleRemoveRoom = (roomId) => {
     const updatedRooms = selectedRooms.filter((r) => r.id !== roomId);

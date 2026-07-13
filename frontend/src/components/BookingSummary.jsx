@@ -1,7 +1,7 @@
 import { Calendar, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { saveBookingData } from "../utils/bookingStorage";
-import { checkTheroomStatus, getTaxAmount } from "../services/api";
+import { checkTheroomStatus, getTaxAmount,  getOtherCharges, } from "../services/api";
 import { useEffect, useState } from "react";
 
 const BookingSummary = ({
@@ -25,6 +25,7 @@ const BookingSummary = ({
 }) => {
   const navigate = useNavigate();
   const [roomTaxesApi, setRoomTaxesApi] = useState([]);
+  const [otherCharges, setOtherCharges] = useState([]);
   // Tax calculation function
 
   // Calculate room charges based on API structure (no service fee or tax)
@@ -37,6 +38,19 @@ const BookingSummary = ({
 
     return sum + (isNaN(calculated) ? 0 : calculated);
   }, 0);
+  useEffect(() => {
+  const fetchOtherCharges = async () => {
+    try {
+      const data = await getOtherCharges();
+      setOtherCharges(data || []);
+    } catch (error) {
+      console.error("Error fetching other charges:", error);
+      setOtherCharges([]);
+    }
+  };
+
+  fetchOtherCharges();
+}, []);
 useEffect(() => {
   const fetchRoomTaxes = async () => {
     // 🟢 CLEAR taxes when no rooms selected
@@ -82,10 +96,17 @@ useEffect(() => {
 
   // Total price - always includes taxes now (both checkout and hotel details page)
   const isCheckout = variant === "checkout";
-  const totalPrice = selectedRooms.length
-  ? roomCharges + totalTaxAmount
-  : 0;
+  // const totalPrice = selectedRooms.length
+  // ? roomCharges + totalTaxAmount
+  // : 0;
+  const totalBeforeOtherCharges = roomCharges + totalTaxAmount;
 
+const platformFee =
+  (totalBeforeOtherCharges * Number(otherCharges?.[0]?.Percentage || 0)) / 100;
+
+const totalPrice = selectedRooms.length
+  ? Math.round(totalBeforeOtherCharges + platformFee)
+  : 0;
   // Calculate totals
   const totalRooms = selectedRooms.reduce(
     (sum, room) => sum + (room.roomCount || 1),
@@ -329,15 +350,32 @@ useEffect(() => {
       )}
 
       {/* Total */}
-      <div
+      {/* <div
         className={`flex items-center justify-between ${isCheckout ? "pt-4 border-t border-gray-100" : "pb-4 border-b border-gray-200"} ${!isCheckout || showModifyButton ? "mb-4" : ""}`}
       >
         <span className="text-base font-semibold text-gray-900">Total INR</span>
        <span className="text-xl font-bold text-gray-900">
   {selectedRooms.length ? `₹${totalPrice.toLocaleString()}` : "₹0"}
 </span>
-      </div>
+      </div> */}
+<div
+  className={`flex items-center justify-between ${
+    isCheckout ? "pt-4 border-t border-gray-100" : "pb-4 border-b border-gray-200"
+  } ${!isCheckout || showModifyButton ? "mb-4" : ""}`}
+>
+  <span className="text-base font-semibold text-gray-900">
+    Total INR
+    {otherCharges?.length > 0 && (
+      <span className="block text-xs font-normal text-gray-500">
+        Includes {otherCharges[0].ChargesParticular} ({otherCharges[0].Percentage}%)
+      </span>
+    )}
+  </span>
 
+  <span className="text-xl font-bold text-gray-900">
+    {selectedRooms.length ? `₹${totalPrice.toLocaleString()}` : "₹0"}
+  </span>
+</div>
       {/* Coupon Code - Only in default mode */}
       {!isCheckout && (
         <div className="mb-4">

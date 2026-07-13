@@ -39,6 +39,34 @@ export const getHotelId = async () => {
   }
 };
 
+export const getOtherCharges = async () => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/bookingengine/getothercharges`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to fetch other charges (${response.status}): ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    console.log("Other Charges:", data);
+
+    return data;
+  } catch (error) {
+    console.error("Error fetching other charges:", error);
+    throw error;
+  }
+};
 export const getPrivacyPolicy = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/bookingengine/getpolicy`, {

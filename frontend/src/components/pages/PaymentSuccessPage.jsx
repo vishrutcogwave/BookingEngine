@@ -93,52 +93,149 @@ const PaymentSuccessPage = () => {
         };
 
         const bookingStatus = 'Confirmed';
+        debugger
         const channel = getChannel();
+console.log(bookingInfo);
+
+        // const reservationData = {
+        //   data: [{
+        //     UserDetails: {
+        //       user_name: `${bookingInfo.guestInfo.firstName} ${bookingInfo.guestInfo.lastName}`,
+        //       mobile: bookingInfo.guestInfo.phone,
+        //       email: bookingInfo.guestInfo.email,
+        //     },
+        //     BookingsDetails: {
+        //       ota_unique_id: otaUniqueId,
+        //       date_of_booking: formatDateInner(new Date()),
+        //       hotel_id: bookingInfo.hotel.HotelId || bookingInfo.hotel.id || 0,
+        //       hotel_name: bookingInfo.hotel.Name || bookingInfo.hotel.name,
+        //       check_in: formatDateInner(bookingInfo.checkInDate),
+        //       check_out: formatDateInner(bookingInfo.checkOutDate),
+        //       booking_id: merchantOrderId,
+        //       grand_total: bookingInfo.totalPrice.toString(),
+        //       paid_amount: bookingInfo.totalPrice.toString(),
+        //       channel: channel,
+        //       booking_instruction: bookingInfo.specialRequests || '',
+        //       status: bookingStatus,
+        //     },
+        //     RoomDetails: bookingInfo.selectedRooms.map((room, index) => {
+        //       const roomTax = calculateRoomTax(index);
+        //       const baseRate = room.pricePerNight || room.price || 0;
+        //       const roomCount = room.roomCount || 1;
+        //       const roomTotal = baseRate * roomCount * bookingInfo.numNights;
+
+        //       return {
+        //         room_type_id: room.roomData?.id || room.id || `RT${index + 1}`,
+        //         room_type_name: room.name,
+        //         no_of_rooms: roomCount,
+        //         room_rate: baseRate,
+        //         room_tax: roomTax,
+        //         room_total: roomTotal + roomTax,
+        //         plan: room.rateShortName || 'Room Only',
+        //         adult: room.adults || 2,
+        //         child: room.children || 0,
+        //       };
+        //     }),
+        //     paiddetails: paymentStatus,
+        //   }],
+        //   b_status: bookingStatus,
+        // };
+
 
         const reservationData = {
-          data: [{
-            UserDetails: {
-              user_name: `${bookingInfo.guestInfo.firstName} ${bookingInfo.guestInfo.lastName}`,
-              mobile: bookingInfo.guestInfo.phone,
-              email: bookingInfo.guestInfo.email,
-            },
-            BookingsDetails: {
-              ota_unique_id: otaUniqueId,
-              date_of_booking: formatDateInner(new Date()),
-              hotel_id: bookingInfo.hotel.HotelId || bookingInfo.hotel.id || 0,
-              hotel_name: bookingInfo.hotel.Name || bookingInfo.hotel.name,
-              check_in: formatDateInner(bookingInfo.checkInDate),
-              check_out: formatDateInner(bookingInfo.checkOutDate),
-              booking_id: merchantOrderId,
-              grand_total: bookingInfo.totalPrice.toString(),
-              paid_amount: bookingInfo.totalPrice.toString(),
-              channel: channel,
-              booking_instruction: bookingInfo.specialRequests || '',
-              status: bookingStatus,
-            },
-            RoomDetails: bookingInfo.selectedRooms.map((room, index) => {
-              const roomTax = calculateRoomTax(index);
-              const baseRate = room.pricePerNight || room.price || 0;
-              const roomCount = room.roomCount || 1;
-              const roomTotal = baseRate * roomCount * bookingInfo.numNights;
+  data: [
+    {
+      UserDetails: {
+        user_name: `${bookingInfo.guestInfo.firstName} ${bookingInfo.guestInfo.lastName}`,
+        mobile: bookingInfo.guestInfo.phone,
+        email: bookingInfo.guestInfo.email,
+      },
 
-              return {
-                room_type_id: room.roomData?.id || room.id || `RT${index + 1}`,
-                room_type_name: room.name,
-                no_of_rooms: roomCount,
-                room_rate: baseRate,
-                room_tax: roomTax,
-                room_total: roomTotal + roomTax,
-                plan: room.rateShortName || 'Room Only',
-                adult: room.adults || 2,
-                child: room.children || 0,
-              };
-            }),
-            paiddetails: paymentStatus,
-          }],
-          b_status: bookingStatus,
+      BookingsDetails: {
+        ota_unique_id: otaUniqueId,
+        date_of_booking: formatDateInner(new Date()),
+        hotel_id: bookingInfo.hotel.HotelId || bookingInfo.hotel.id || 0,
+        hotel_name: bookingInfo.hotel.Name || bookingInfo.hotel.name,
+        check_in: formatDateInner(bookingInfo.checkInDate),
+        check_out: formatDateInner(bookingInfo.checkOutDate),
+        booking_id: merchantOrderId,
+        grand_total: bookingInfo.totalPrice.toString(),
+        paid_amount: bookingInfo.totalPrice.toString(),
+        channel,
+        booking_instruction: bookingInfo.specialRequests || "",
+        status: bookingStatus,
+      },
+
+      RoomDetails: bookingInfo.selectedRooms.map((room, index) => {
+        const roomTax = calculateRoomTax(index);
+
+        const roomCount = room.roomCount || 1;
+        const roomRate = (room.pricePerNight || room.price || 0) * roomCount * bookingInfo.numNights;
+        const roomTotal = roomRate + roomTax;
+
+        return {
+          room_type_id: room.roomData?.id || room.id,
+          room_type_name: room.name.replace(/\r?\n/g, " "),
+          no_of_rooms: roomCount,
+
+          totroom_rate: roomRate,
+          totroom_tax: roomTax,
+          totroom_total: roomTotal,
+
+          discounted_room_rate_before_tax: roomRate,
+          discount: 0,
+
+          plan: room.rateShortName || "Room Only",
+          rate_plan_id: room.ratePlanId || "",
+
+          adult: room.adults || 0,
+          child: room.children || 0,
+
+          Price: [
+            {
+              staydate: bookingInfo.checkInDate,
+              room_rate: roomRate,
+              room_tax: roomTax,
+              room_total: roomTotal,
+            },
+          ],
         };
+      }),
 
+      paiddetails: {
+        orderId: merchantOrderId,
+        state: paymentStatus?.state || bookingStatus,
+        amount: bookingInfo.totalPrice,
+        expireAt: paymentStatus?.expireAt || 0,
+
+        metaInfo: {
+          udf1: "",
+          udf2: "",
+          udf3: "",
+          udf4: "",
+          udf5: "",
+        },
+
+        paymentDetails: [
+          {
+            paymentMode: paymentStatus?.paymentMode || "ONLINE",
+            transactionId:
+              paymentStatus?.transactionId ||
+              paymentStatus?.orderId ||
+              merchantOrderId,
+            timestamp: paymentStatus?.timestamp || Date.now(),
+            amount: bookingInfo.totalPrice,
+            state: paymentStatus?.state || bookingStatus,
+          },
+        ],
+      },
+
+   othercharges: bookingInfo.othercharges || [],
+    },
+  ],
+
+  b_status: bookingStatus,
+};
         let reservationNo = null;
         try {
           const reservationResponse = await submitReservation(reservationData);
@@ -154,24 +251,69 @@ const PaymentSuccessPage = () => {
         });
 
         try {
-          const pdfData = {
-            hotelName: bookingInfo.hotel.Name || bookingInfo.hotel.name,
-            bookingNo: reservationNo || merchantOrderId,
-            guestName: `${bookingInfo.guestInfo.firstName} ${bookingInfo.guestInfo.lastName}`,
-            email: bookingInfo.guestInfo.email,
-            mobileNo: bookingInfo.guestInfo.phone,
-            adults: bookingInfo.selectedRooms.reduce((sum, r) => sum + (r.adults || 2), 0),
-            children: bookingInfo.selectedRooms.reduce((sum, r) => sum + (r.children || 0), 0),
-            checkIn: bookingInfo.checkInDate?.split('T')[0],
-            checkOut: bookingInfo.checkOutDate?.split('T')[0],
-            nights: bookingInfo.numNights,
-            rooms: bookingInfo.selectedRooms,
-            subtotal: bookingInfo.totalPrice,
-            totalTax: 0,
-            grandTotal: bookingInfo.totalPrice,
-            paymentStatus: 'Completed',
-            transactionId: merchantOrderId
-          };
+    const totalTax = bookingInfo.roomTaxes.reduce(
+  (sum, room) =>
+    sum +
+    room.taxes.reduce(
+      (taxSum, tax) => taxSum + Number(tax.TaxValue || 0),
+      0
+    ),
+  0
+);
+
+const pdfData = {
+  hotelName: bookingInfo.hotel.Name || bookingInfo.hotel.name,
+  bookingNo: reservationNo || merchantOrderId,
+
+  guestName: `${bookingInfo.guestInfo.firstName} ${bookingInfo.guestInfo.lastName}`,
+  email: bookingInfo.guestInfo.email,
+  mobileNo: bookingInfo.guestInfo.phone,
+
+  adults: bookingInfo.numGuests,
+  children: bookingInfo.selectedRooms.reduce(
+    (sum, room) => sum + (room.children || 0),
+    0
+  ),
+
+  checkIn: bookingInfo.checkInDate.split("T")[0],
+  checkOut: bookingInfo.checkOutDate.split("T")[0],
+  nights: bookingInfo.numNights,
+
+  rooms: bookingInfo.selectedRooms.map((room, index) => {
+    const roomTax = bookingInfo.roomTaxes[index]?.taxes?.reduce(
+      (sum, tax) => sum + Number(tax.TaxValue || 0),
+      0
+    ) || 0;
+
+    const roomRate =
+      (room.pricePerNight || room.price || 0) *
+      (room.roomCount || 1) *
+      bookingInfo.numNights;
+
+    return {
+      roomName: room.roomData?.name || room.name,
+      roomType: room.rateShortName || "Room Only",
+      roomCount: room.roomCount || 1,
+
+      adults: room.adults || 0,
+      children: room.children || 0,
+
+      roomRate,
+      roomTax,
+      roomTotal: roomRate + roomTax,
+    };
+  }),
+
+  subtotal: bookingInfo.roomCharges,
+  totalTax,
+
+  otherCharges: bookingInfo.othercharges || [],
+
+  grandTotal: bookingInfo.totalPrice,
+
+  paymentStatus: "Completed",
+  transactionId: merchantOrderId,
+};
 
           const pdfBase64 = generateBookingPDFBase64(pdfData);
 

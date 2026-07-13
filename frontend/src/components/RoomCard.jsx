@@ -443,9 +443,14 @@ const pax1Price =
 </button>
 </div>
 
-<p className="text-xs text-gray-500 mt-1">
-  (Exclusive of Taxes)
-</p>
+<div className="mt-1">
+  <p className="text-xs text-gray-500">
+    (Exclusive of Taxes)
+  </p>
+  <p className="text-xs text-amber-600 font-medium mt-1">
+    * Child charges are applicable for children from 5 to 10 years old.
+  </p>
+</div>
 
             {/* Selected Rooms - Room Only */}
             {selectedRatePlan === "only" && selectedRooms.length > 0 && (
@@ -846,7 +851,14 @@ const pax1Price =
         : "Book Room"}
   </button>
 </div>
-              <p className="text-xs text-gray-500 mt-1">(Exclusive of Taxes)</p>
+        <div className="mt-1">
+  <p className="text-xs text-gray-500">
+    (Exclusive of Taxes)
+  </p>
+  <p className="text-xs text-amber-600 font-medium mt-1">
+    * Child charges are applicable for children from 5 to 10 years old.
+  </p>
+</div>
 
               {/* Selected Rooms - Room With Breakfast */}
               {selectedRatePlan === "breakfast" && selectedRooms.length > 0 && (

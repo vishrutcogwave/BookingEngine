@@ -2,7 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, Mail, X } from "lucide-react";
 import Navbar from "../Navbar";
 import BookingSummary from "../BookingSummary";
-import { createPhonePePayment, getTaxAmount } from "../../services/api";
+import {
+  createPhonePePayment,
+  getTaxAmount,
+  getOtherCharges,
+} from "../../services/api";
 import {
   getSelectedRooms,
   getCheckInDate,
@@ -64,9 +68,22 @@ const CheckoutPage = () => {
   );
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [roomTaxes, setRoomTaxes] = useState([]);
+  const [otherCharges, setOtherCharges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [validationErrors, setValidationErrors] = useState({});
+useEffect(() => {
+  const fetchOtherCharges = async () => {
+    try {
+      const data = await getOtherCharges();
+      setOtherCharges(data || []);
+    } catch (error) {
+      console.error(error);
+      setOtherCharges([]);
+    }
+  };
 
+  fetchOtherCharges();
+}, []);
   const countryCodes = [
     { code: "+91", name: "India", flag: "🇮🇳" },
     { code: "+1", name: "USA", flag: "🇺🇸" },
@@ -196,7 +213,15 @@ const CheckoutPage = () => {
   );
 
   // Total price including taxes
-  const totalPrice = roomCharges + totalTaxAmount;
+const totalBeforeOtherCharges = roomCharges + totalTaxAmount;
+
+const percentage = Number(otherCharges?.[0]?.Percentage || 0);
+
+const platformFee = Math.round(
+  (totalBeforeOtherCharges * percentage) / 100
+);
+
+const totalPrice = totalBeforeOtherCharges + platformFee;
 
   // Set room taxes locally based on calculation (no API call needed)
   useEffect(() => {
@@ -358,99 +383,82 @@ const CheckoutPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handlePayNow = async () => {
-    debugger;
-
+ const handlePayNow = async () => {
+    debugger
+    // Validate all form fields
     if (!validateGuestInfo()) {
-      error("Please fix all validation errors before proceeding to payment.");
+      error('Please fix all validation errors before proceeding to payment.');
       return;
     }
 
     setIsProcessingPayment(true);
 
     try {
-      // ✅ Store booking info
+      // // Store booking and guest info for success page
+      // const bookingInfo = {
+      //   guestInfo,
+      //   additionalGuests,
+      //   specialRequests,
+      //   selectedRooms,
+      //   hotel,
+      //   checkInDate: checkInDate.toISOString(),
+      //   checkOutDate: checkOutDate.toISOString(),
+      //   roomCharges,
+      //   roomTaxes,
+      //   totalPrice,
+      //   numNights,
+      //   numGuests,
+        
+      // };
+ 
       const bookingInfo = {
-        guestInfo,
-        additionalGuests,
-        specialRequests,
-        selectedRooms,
-        hotel,
-        checkInDate: checkInDate.toISOString(),
-        checkOutDate: checkOutDate.toISOString(),
-        roomCharges,
-        roomTaxes,
-        totalPrice,
-        numNights,
-        numGuests,
-      };
+  guestInfo,
+  additionalGuests,
+  specialRequests,
+  selectedRooms,
+  hotel,
+  checkInDate: checkInDate.toISOString(),
+  checkOutDate: checkOutDate.toISOString(),
+  roomCharges,
+  roomTaxes,
+  totalPrice,
+  numNights,
+  numGuests,
+  othercharges: [
+    {
+      ChargesName: otherCharges?.[0]?.ChargesParticular || "",
+      Percentage: Number(otherCharges?.[0]?.Percentage || 0),
+      ChargesValues: platformFee,
+    },
+  ],
+};
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingInfo));
 
-      sessionStorage.setItem("pendingBooking", JSON.stringify(bookingInfo));
-      console.log("bookingInfo", bookingInfo);
+      // Create payment - totalPrice includes taxes
+      const successUrl = `${window.location.origin}/payment-success`;
+      console.log("sssssssss",`${window.location.origin}/payment-success`); 
+      
+      const paymentResponse = await createPhonePePayment(totalPrice, successUrl);
 
-      const response = await fetch(
-        "http://192.168.1.109:7678/api/ccavenue/initiatepayment",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            OrderId: "ORD" + Date.now(), // dynamic order id
-            Amount: totalPrice, // use your calculated total
-            CustomerName: `${guestInfo.firstName} ${guestInfo.lastName}`,
-            Email: guestInfo.email,
-            Mobile: guestInfo.phone,
-            Redirecturl:
-              "http://192.168.1.109:7678/api/ccavenue/responsepayment",
-            cancelurl: "http://192.168.1.109:7678/api/ccavenue/responsepayment",
-          }),
-        },
-      );
-      const data = await response.json();
-      console.log("Response:", data);
-
-      // ✅ MOCK CCAvenue response (your API response)
-
-      console.log("Using Mock CCAvenue Response:", data);
-
-      // ✅ Validate
-      if (!data.encRequest || !data.accessCode || !data.URL) {
-        throw new Error("Invalid payment data");
+      if (!paymentResponse.redirectUrl) {
+        throw new Error('No redirect URL received from payment gateway');
       }
 
-      // ✅ Redirect to CCAvenue
-      redirectToCCAvenue(data);
-    } catch (err) {
-      console.error("Payment initiation failed:", err);
+      // Store merchant order ID for status check
+      sessionStorage.setItem('merchantOrderId', paymentResponse.merchantOrderId);
+
+      // Note: PhonePe sandbox might have CSP issues. If payment page doesn't load properly,
+      // it's a known issue with their sandbox environment.
+      
+      // Redirect to PhonePe payment page
+      window.location.href = paymentResponse.redirectUrl;
+    } catch (error) {
+      // console.error('Payment initiation failed:', error);
       setIsProcessingPayment(false);
-      error("Failed to initiate payment. Please try again.");
+      error('Failed to initiate payment. Please try again.');
     }
   };
-  const redirectToCCAvenue = ({ encRequest, accessCode, URL }) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = URL;
 
-    const encInput = document.createElement("input");
-    encInput.type = "hidden";
-    encInput.name = "encRequest";
-    encInput.value = encRequest;
-
-    const accessInput = document.createElement("input");
-    accessInput.type = "hidden";
-    accessInput.name = "access_code";
-    accessInput.value = accessCode;
-
-    form.appendChild(encInput);
-    form.appendChild(accessInput);
-
-    document.body.appendChild(form);
-
-    console.log("Redirecting to CCAvenue...");
-
-    form.submit();
-  };
   return (
     <div className="min-h-screen bg-white">
       <Navbar />

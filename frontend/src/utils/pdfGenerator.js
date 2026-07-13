@@ -124,24 +124,53 @@ export const generateBookingConfirmationPDF = (bookingData) => {
     doc.setTextColor(...darkGray);
     doc.setFontSize(10);
     
-    bookingData.rooms.forEach((room, index) => {
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${index + 1}. ${room.name || 'Room'}`, margin + 5, yPos);
-      yPos += 6;
-      
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Quantity: ${room.quantity || 1}`, margin + 8, yPos);
-      yPos += 5;
-      
-      doc.text(`Rate: ${formatCurrency(room.rate || 0)} per night`, margin + 8, yPos);
-      yPos += 5;
-      
-      if (room.totalAmount) {
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Total: ${formatCurrency(room.totalAmount)}`, margin + 8, yPos);
-        yPos += 7;
-      }
-    });
+  bookingData.rooms.forEach((room, index) => {
+ doc.setFont('helvetica', 'bold');
+
+const roomName = `${index + 1}. ${room.roomName}`;
+const roomLines = doc.splitTextToSize(roomName, contentWidth - 10);
+
+doc.text(roomLines, margin + 5, yPos);
+
+// Move Y position based on the number of wrapped lines
+yPos += roomLines.length * 6;
+  doc.setFont('helvetica', 'normal');
+
+  doc.text(`Plan: ${room.roomType}`, margin + 8, yPos);
+  yPos += 5;
+
+  doc.text(`Quantity: ${room.roomCount}`, margin + 8, yPos);
+  yPos += 5;
+
+  doc.text(
+    `Adults: ${room.adults}   Children: ${room.children}`,
+    margin + 8,
+    yPos
+  );
+  yPos += 5;
+
+  doc.text(
+    `Rate: ${formatCurrency(room.roomRate)} per night`,
+    margin + 8,
+    yPos
+  );
+  yPos += 5;
+
+  doc.text(
+    `Tax: ${formatCurrency(room.roomTax)}`,
+    margin + 8,
+    yPos
+  );
+  yPos += 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text(
+    `Total: ${formatCurrency(room.roomTotal)}`,
+    margin + 8,
+    yPos
+  );
+  yPos += 12;
+});
   }
   
   // Payment Summary Section
@@ -180,8 +209,24 @@ export const generateBookingConfirmationPDF = (bookingData) => {
   if (bookingData.totalTax) {
     doc.text('Total Tax:', margin + 5, yPos);
     doc.text(formatCurrency(bookingData.totalTax), rightAlign, yPos, { align: 'right' });
-    yPos += 8;
+    yPos += 12;
   }
+  bookingData.otherCharges?.forEach((charge) => {
+  doc.text(
+    `${charge.ChargesName} (${charge.Percentage}%)`,
+    margin + 5,
+    yPos
+  );
+
+  doc.text(
+    formatCurrency(charge.ChargesValues),
+    rightAlign,
+    yPos,
+    { align: 'right' }
+  );
+
+  yPos += 6;
+});
   
   // Grand Total with highlight
   doc.setFillColor(255, 255, 255);

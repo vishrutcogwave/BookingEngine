@@ -397,20 +397,21 @@ const handleRemoveRoom = (roomId) => {
       (rp) => rp.RateShortName === "Room Only"
     );
 
-const pax1Price =
-  roomOnlyPlan?.PriceDetails?.[0]?.Prices?.[0]?.["1"]?.AdultPrice || 0;
+const defaultAdults =
+  room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1;
 
+const paxPrice =
+  roomOnlyPlan?.PriceDetails?.[0]?.Prices?.[0]?.[
+    String(defaultAdults)
+  ]?.AdultPrice || 0;
     return (
       <>
    
 
-        <span className="text-xl sm:text-2xl font-bold text-gray-900">
-      ₹{Number(pax1Price).toLocaleString()}
-        </span>
-
-        <span className="text-xs text-gray-500">
-          / Head
-        </span>
+      <span className="text-xl sm:text-2xl font-bold text-gray-900">
+  ₹{Number(paxPrice).toLocaleString()}
+</span>
+<span className="text-xs text-gray-500">/ Night</span>
 
       
       </>
@@ -795,30 +796,26 @@ const pax1Price =
             <div className="flex items-center justify-between">
   <div className="flex items-center gap-2 flex-wrap">
     {(() => {
-      const breakfastPlan = room.ratePlans?.find(
-        (rp) => rp.RateShortName === "Room with Breakfast"
-      );
+const breakfastPlan = room.ratePlans?.find(
+  (rp) => rp.RateShortName === "Room with Breakfast"
+);
 
-   const pax1Price =
-  breakfastPlan?.PriceDetails?.[0]?.Prices?.[0]?.["1"]?.AdultPrice || 0;
+const defaultAdults =
+  room?.roomTypeData?.MaxOccupancy?.DefaultAdult || 1;
 
-
-
-
-
+const paxPrice =
+  breakfastPlan?.PriceDetails?.[0]?.Prices?.[0]?.[
+    String(defaultAdults)
+  ]?.AdultPrice || 0;
 
 
 
       return (
         <>
-       
-          <span className="text-xl sm:text-2xl font-bold text-gray-900">
-         ₹{Number(pax1Price).toLocaleString()}
-          </span>
-
-          <span className="text-xs text-gray-500">
-            / Head
-          </span>
+      <span className="text-xl sm:text-2xl font-bold text-gray-900">
+  ₹{Number(paxPrice).toLocaleString()}
+</span>
+<span className="text-xs text-gray-500">/ Night</span>
 
        
         </>

@@ -2,8 +2,9 @@
 // const API_BASE_URL = 'https://pousadabookingapi.cogwave.in'
 // const API_BASE_URL = 'https://rainbowbookingapi.cogwave.in'
 
-const API_BASE_URL = 'https://mayansresortapi.cogwave.in';
+// const API_BASE_URL = 'https://mayansresortapi.cogwave.in';
 // const API_BASE_URL = 'https://kusumresortsbookingapi.cogwave.in';
+const API_BASE_URL="https://modelgrandbookingapi.cogwave.in"
 
 // const API_BASE_URL="https://srcloudbookingapi.cogwave.in"
 /**

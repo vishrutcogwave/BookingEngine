@@ -85,10 +85,7 @@ const PaymentSuccessPage = () => {
         };
 
         const getChannel = () => {
-          const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-          if (/android|iphone|ipad|ipod/i.test(userAgent.toLowerCase())) {
-            return 'Mobile';
-          }
+      
           return 'Web';
         };
 

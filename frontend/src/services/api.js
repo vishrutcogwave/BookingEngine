@@ -8,7 +8,7 @@
 // const API_BASE_URL="https://pousadabookingapi.cogwave.in/"
 
 
-const API_BASE_URL="https://bookingengineparkcityapi.cogwave.in/"
+const API_BASE_URL="https://bookingengineparkcityapi.cogwave.in"
 
 
 
